@@ -1,58 +1,11 @@
-// --- MRTLC NEXUS v3.5: MASTER UI & ENGINE GRAPHICS CONTROLLER ---
+// --- MRTLC NEXUS v3.5: MASTER UI & ENGINE GRAPHICS CONTROLLER (INTEGRATED BUILD) ---
 
-// EXCLUSIVE HIGH GLOW LUAU SYNTAX TOXIN HIGHLIGHTER ENGINE
-function renderLuauSyntax(rawScriptCode) {
-    const outputBox = document.getElementById('code-preview-box');
-    if (!outputBox) return;
-
-    // Safety clean for text entities
-    let escaped = rawScriptCode
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
-
-    // Core regex engine highlighting loops
-    escaped = escaped.replace(/(--.*)/g, '<span class="l-com">$1</span>'); // Comments
-    escaped = escaped.replace(/(["'])(.*?)\1/g, '<span class="l-str">$1$2$1</span>'); // Strings
-    escaped = escaped.replace(/\b(\d+)\b/g, '<span class="l-num">$1</span>'); // Numbers
-    
-    // Luau structural core operators
-    const keywords = [
-        'local', 'function', 'return', 'end', 'if', 'then', 'else', 'elseif',
-        'for', 'in', 'pairs', 'ipairs', 'while', 'do', 'repeat', 'until', 'true', 'false', 'nil'
-    ];
-    keywords.forEach(word => {
-        const regex = new RegExp(`\\b${word}\\b`, 'g');
-        escaped = escaped.replace(regex, `<span class="l-key">${word}</span>`);
-    });
-
-    // Roblox API standard engines
-    const builtins = [
-        'Instance', 'Vector3', 'CFrame', 'UDim2', 'BrickColor', 'Color3', 'TweenInfo', 'Task', 
-        'game', 'workspace', 'script', 'print', 'warn', 'error', 'typeof', 'require'
-    ];
-    builtins.forEach(built => {
-        const regex = new RegExp(`\\b${built}\\b`, 'g');
-        escaped = escaped.replace(regex, `<span class="l-bi">${built}</span>`);
-    });
-
-    outputBox.innerHTML = `<code>${escaped}</code>`;
-}
-
-// Global buffer tracking engine to support clipboard commands
-let currentConsoleBufferText = ""; 
-
-// Modify your copy logic to capture the raw untagged text safely
-function copyConsoleBuffer() {
-    const outputBox = document.getElementById('code-preview-box');
-    if(!outputBox) return;
-    
-    const textToCopy = outputBox.innerText || currentConsoleBufferText;
-    navigator.clipboard.writeText(textToCopy);
-    alert("📋 Raw script chunk copied to clipboard frame!");
-}
+// Global states for structural scaling and filter parameters
+let currentNexusFileStats = { scripts: 0, instances: 0, parts: 0 };
+let visualizerSensitivityMultiplier = 1.0;
 
 document.addEventListener("DOMContentLoaded", () => {
+    // Check local persistent memory for cached wallpaper string on load
     const savedWallpaper = localStorage.getItem("nexus_wallpaper");
     if (savedWallpaper) {
         document.body.style.backgroundImage = `url(${savedWallpaper})`;
@@ -62,7 +15,100 @@ document.addEventListener("DOMContentLoaded", () => {
     if(engineStatus) {
         engineStatus.style.color = "var(--accent)";
     }
+
+    // Inject dynamic HTML UI frames for Search, Stats, and Sensitivity automatically to prevent file bloat
+    injectNexusUpgradeElements();
 });
+
+function injectNexusUpgradeElements() {
+    // 1. Inject Node Filter Search Input directly above the Tree View
+    const treeView = document.getElementById('tree-view');
+    if (treeView && !document.getElementById('nexus-node-search')) {
+        const searchInput = document.createElement('input');
+        searchInput.id = 'nexus-node-search';
+        searchInput.type = 'text';
+        searchInput.placeholder = '🔍 FILTER WORKSPACE TREE NODES...';
+        searchInput.style = 'width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--glass-border); padding: 8px 12px; border-radius: 6px; color: var(--accent); font-family: monospace; font-size: 11px; margin-bottom: 8px; box-sizing: border-box; outline: none;';
+        searchInput.oninput = (e) => filterNexusTreeNodes(e.target.value);
+        treeView.parentNode.insertBefore(searchInput, treeView);
+    }
+
+    // 2. Inject Workspace Analysis Grid directly below the Main Compile Button
+    const compileBtn = document.getElementById('main-compile-btn');
+    if (compileBtn && !document.getElementById('nexus-stats-panel')) {
+        const statsPanel = document.createElement('div');
+        statsPanel.id = 'nexus-stats-panel';
+        statsPanel.style = 'display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 12px;';
+        statsPanel.innerHTML = `
+            <div style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 6px; border-radius: 6px; text-align: center; font-family: monospace; font-size: 10px;">
+                <div style="color: var(--text-muted);">SCRIPTS</div><div id="stat-count-scripts" style="color: var(--accent); font-weight: bold; font-size: 12px;">0</div>
+            </div>
+            <div style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 6px; border-radius: 6px; text-align: center; font-family: monospace; font-size: 10px;">
+                <div style="color: var(--text-muted);">PARTS</div><div id="stat-count-parts" style="color: var(--neon-green); font-weight: bold; font-size: 12px;">0</div>
+            </div>
+            <div style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 6px; border-radius: 6px; text-align: center; font-family: monospace; font-size: 10px;">
+                <div style="color: var(--text-muted);">TOTAL INST</div><div id="stat-count-total" style="color: #ffaa00; font-weight: bold; font-size: 12px;">0</div>
+            </div>
+        `;
+        compileBtn.parentNode.insertBefore(statsPanel, compileBtn.nextSibling);
+    }
+
+    // 3. Inject Sensitivity Range Control Slider directly beneath the Audio Canvas
+    const canvas = document.getElementById('visualizer-canvas');
+    if (canvas && !document.getElementById('nexus-sensitivity-wrapper')) {
+        const sliderWrapper = document.createElement('div');
+        sliderWrapper.id = 'nexus-sensitivity-wrapper';
+        sliderWrapper.style = 'margin-top: 12px; background: rgba(0,0,0,0.15); border: 1px solid var(--glass-border); padding: 10px; border-radius: 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px;';
+        sliderWrapper.innerHTML = `
+            <span style="font-family: monospace; font-size: 10px; color: var(--text-muted); white-space: nowrap;">🎛️ WAVE GAIN:</span>
+            <input type="range" min="0.5" max="3.0" step="0.1" value="1.0" style="width: 100%; accent-color: var(--accent); cursor: pointer;" oninput="updateVisualizerSensitivity(this.value)">
+            <span id="sensitivity-readout" style="font-family: monospace; font-size: 10px; color: var(--accent); min-width: 25px; text-align: right;">1.0x</span>
+        `;
+        canvas.parentNode.insertBefore(sliderWrapper, canvas.nextSibling);
+    }
+}
+
+// INTERFACE EXTENSION LOGIC 1: TREE FILTER SEARCH
+function filterNexusTreeNodes(query) {
+    const cleanQuery = query.toLowerCase().trim();
+    const treeView = document.getElementById('tree-view');
+    if (!treeView) return;
+
+    // Grab all structural elements or row links inside the tree layout box
+    const nodes = treeView.querySelectorAll('.tree-node, div, span');
+    nodes.forEach(node => {
+        if (node.children.length > 0 && node.tagName !== 'SPAN') return; // Skip structural parent folders
+        const text = node.textContent.toLowerCase();
+        if (text.includes(cleanQuery)) {
+            node.style.display = '';
+            // Walk up and ensure matching parent structures remain visible
+            let parent = node.parentElement;
+            while (parent && parent !== treeView) {
+                parent.style.display = '';
+                parent = parent.parentElement;
+            }
+        } else {
+            node.style.display = 'none';
+        }
+    });
+}
+
+// INTERFACE EXTENSION LOGIC 2: GLOBAL METRICS COUNTER PIPELINE
+// Call this function inside your nexus-parser.js file when looping through nodes!
+function updateNexusWorkspaceStats(scripts, parts, total) {
+    currentNexusFileStats = { scripts, instances: total, parts };
+    if(document.getElementById('stat-count-scripts')) {
+        document.getElementById('stat-count-scripts').innerText = scripts;
+        document.getElementById('stat-count-parts').innerText = parts;
+        document.getElementById('stat-count-total').innerText = total;
+    }
+}
+
+// INTERFACE EXTENSION LOGIC 3: VISUALIZER AMPLIFIER CONSTANT
+function updateVisualizerSensitivity(val) {
+    visualizerSensitivityMultiplier = parseFloat(val);
+    document.getElementById('sensitivity-readout').innerText = `${visualizerSensitivityMultiplier.toFixed(1)}x`;
+}
 
 function switchNexusTab(targetTab) {
     const tabs = ['parser', 'visualizer', 'settings'];
@@ -182,7 +228,12 @@ async function processAudioSelection(input) {
             for (let i = 0; i < dataLength; i++) {
                 let percentValue = dataArray[i] / 255;
                 let maxBarHeight = viewHeight * 0.55;
-                let barHeight = percentValue * maxBarHeight;
+                
+                // INTEGRATION MATRIX POINT: Multiplies bar bounce calculation by the slider scalar variable
+                let barHeight = percentValue * maxBarHeight * visualizerSensitivityMultiplier;
+
+                // Clamp to prevent visual clipping out of canvas limits
+                if(barHeight > viewHeight * 0.63) barHeight = viewHeight * 0.63;
 
                 let xPos = i * (viewWidth / dataLength) + (viewWidth / dataLength - barWidth) / 2;
                 let yPos = (viewHeight * 0.65) - barHeight;
@@ -219,4 +270,4 @@ async function processAudioSelection(input) {
         drawLiquidLoop();
     };
     reader.readAsArrayBuffer(file);
-                        }
+}
