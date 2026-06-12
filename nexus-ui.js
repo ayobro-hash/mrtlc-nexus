@@ -1,14 +1,13 @@
-// --- MRTLC NEXUS v3.5: MASTER UI & ENGINE GRAPHICS CONTROLLER (REMAKE BUILD) ---
+// --- MRTLC NEXUS v3.5: MASTER UI & ENGINE GRAPHICS CONTROLLER (SECURE DIRECT BUFFER BUILD) ---
 
-// Global architecture states for structural tracking and audio analytics
+// Global architecture states for structural tracking and audio parameters
 let currentNexusFileStats = { scripts: 0, instances: 0, parts: 0 };
 let visualizerSensitivityMultiplier = 1.0;
 
-// Re-engineered HTML5 Audio Pipeline states to guarantee canvas frequency capture
+// Direct Audio Buffer Engine states to bypass browser cross-origin locks
 let audioContextInstance = null;
 let analyserNode = null;
-let sourceNode = null;
-let audioTagInstance = null; // Underlying hardware routing tag
+let currentAudioSource = null;
 let isVisualizerLoopRunning = false;
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -23,16 +22,13 @@ document.addEventListener("DOMContentLoaded", () => {
         engineStatus.style.color = "var(--accent)";
     }
 
-    // Automate injection of search bar, statistics grid, and gain engine components
+    // Automate injection of search bar, statistics grid, and gain components
     injectNexusUpgradeElements();
-    
-    // Initialize a hidden audio element to anchor stable browser decoding streams
-    initHiddenAudioPipeline();
 });
 
 /**
  * CORE GENERATOR: DYNAMIC DOM INJECTION
- * Safely inserts the interactive modules without altering your index.html core
+ * Safely inserts interactive upgrades without altering your index.html file
  */
 function injectNexusUpgradeElements() {
     // 1. Inject Node Filter Search Input directly above the Tree View container
@@ -84,7 +80,6 @@ function injectNexusUpgradeElements() {
 
 /**
  * UPGRADE MODULE 1: INTERACTIVE EXPLORER FILTER
- * Loops across standard tree elements or text rows, stripping unselected classes
  */
 function filterNexusTreeNodes(query) {
     const cleanQuery = query.toLowerCase().trim();
@@ -110,7 +105,7 @@ function filterNexusTreeNodes(query) {
 
 /**
  * UPGRADE MODULE 2: WORKSPACE COMPILATION STATS ENTRY HOOK
- * Fire this explicitly from nexus-parser.js to sync files with the readout panels
+ * Fire this from 'nexus-parser.js' decompiler configurations to link elements up!
  */
 function updateNexusWorkspaceStats(scripts, parts, total) {
     currentNexusFileStats = { scripts, instances: total, parts };
@@ -192,28 +187,18 @@ function clearSavedWallpaper() {
 }
 
 /**
- * ULTIMATE RE-ENGINEERED SOUND HARNESS LAYER
- * Resolves flatlining by mounting a true HTML5 track element rather than data array snapshots
+ * RE-ENGINEERED DIRECT MEMORY BUFFER ENGINE
+ * Decodes files locally into an ArrayBuffer array. This safely unlocks the browser's data restrictions.
  */
-function initHiddenAudioPipeline() {
-    if (document.getElementById('nexus-core-audio-element')) return;
-    
-    audioTagInstance = document.createElement('audio');
-    audioTagInstance.id = 'nexus-core-audio-element';
-    audioTagInstance.crossOrigin = "anonymous";
-    audioTagInstance.style.display = "none";
-    document.body.appendChild(audioTagInstance);
-}
-
 async function processAudioSelection(input) {
     const file = input.files[0];
     if (!file) return;
 
     const statusBox = document.getElementById('audio-status-box');
-    statusBox.innerText = `LOADING MATRIX STREAM...`;
+    statusBox.innerText = `DECODING STREAM MATRIX...`;
     statusBox.style.display = 'block';
 
-    // Build the cross-platform Context directly under the pointer gesture thread
+    // Spawn an isolated audio frame inside the safe click thread loop
     if (!audioContextInstance) {
         audioContextInstance = new (window.AudioContext || window.webkitAudioContext)();
     }
@@ -222,36 +207,51 @@ async function processAudioSelection(input) {
         await audioContextInstance.resume();
     }
 
-    // Connect node routes only once to avoid duplicate hardware graph allocations
-    if (!analyserNode) {
-        analyserNode = audioContextInstance.createAnalyser();
-        analyserNode.fftSize = 64; // Low bucket optimization for crystal-clear response on mobile views
-        analyserNode.smoothingTimeConstant = 0.75;
-        
-        sourceNode = audioContextInstance.createMediaElementSource(audioTagInstance);
-        sourceNode.connect(analyserNode);
-        analyserNode.connect(audioContextInstance.destination);
+    // Kill any existing playback layers to clear memory registers
+    if (currentAudioSource) {
+        try { currentAudioSource.stop(); } catch(e){}
+        try { currentAudioSource.disconnect(); } catch(e){}
     }
 
-    // Convert raw media file chunk into a secure blob link string
-    const objectUrl = URL.createObjectURL(file);
-    audioTagInstance.src = objectUrl;
-    
-    // Fire the hardware engine play routine
-    audioTagInstance.play().then(() => {
-        statusBox.innerText = `STREAMING: [${file.name.toUpperCase()}]`;
-        document.getElementById('engine-status').innerText = "AUDIO FEED";
-        document.getElementById('engine-status').style.color = "var(--neon-purple)";
-        
-        // Launch rendering engine loops if currently idling
-        if (!isVisualizerLoopRunning) {
-            isVisualizerLoopRunning = true;
-            beginCanvasRenderMatrix();
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        const rawBufferArray = e.target.result;
+
+        try {
+            // Unlocks cross-origin security protocols by parsing array blocks straight to hardware memory
+            const decodedBufferData = await audioContextInstance.decodeAudioData(rawBufferArray);
+            
+            currentAudioSource = audioContextInstance.createBufferSource();
+            currentAudioSource.buffer = decodedBufferData;
+
+            if (!analyserNode) {
+                analyserNode = audioContextInstance.createAnalyser();
+                analyserNode.fftSize = 64; // Low bucket optimization for fast frequency updates on mobile screen viewports
+                analyserNode.smoothingTimeConstant = 0.75;
+            }
+
+            // Bind hardware paths directly
+            currentAudioSource.connect(analyserNode);
+            analyserNode.connect(audioContextInstance.destination);
+            
+            // Activate play engine trace
+            currentAudioSource.start(0);
+
+            statusBox.innerText = `STREAMING: [${file.name.toUpperCase()}]`;
+            document.getElementById('engine-status').innerText = "AUDIO FEED";
+            document.getElementById('engine-status').style.color = "var(--neon-purple)";
+
+            if (!isVisualizerLoopRunning) {
+                isVisualizerLoopRunning = true;
+                beginCanvasRenderMatrix();
+            }
+
+        } catch (err) {
+            console.error("Audio Hardware Decoding Crash Event:", err);
+            statusBox.innerText = "ERR: FILE ENCODING TYPE FAULT";
         }
-    }).catch(err => {
-        console.error("Media Routing Fault:", err);
-        statusBox.innerText = "ERR: INTERACTION AUDIO BLOCKED";
-    });
+    };
+    reader.readAsArrayBuffer(file);
 }
 
 function beginCanvasRenderMatrix() {
@@ -260,7 +260,7 @@ function beginCanvasRenderMatrix() {
     
     const ctx = canvas.getContext('2d');
     
-    // Handle Retina screen rendering ratios safely
+    // Scale tracking frame bounds to match retina high-DPI scaling factors
     canvas.width = canvas.clientWidth * window.devicePixelRatio;
     canvas.height = canvas.clientHeight * window.devicePixelRatio;
     ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
@@ -275,14 +275,14 @@ function beginCanvasRenderMatrix() {
     function renderFrameLoop() {
         requestAnimationFrame(renderFrameLoop);
         
-        // Feed frequency registers directly into data map array
+        // Feed live volume frequencies into target data array indices
         analyserNode.getByteFrequencyData(dataArray);
 
-        // Neon trace background trailing clear
+        // Clear canvas with responsive opacity for trails
         ctx.fillStyle = 'rgba(4, 4, 6, 0.22)';
         ctx.fillRect(0, 0, viewWidth, viewHeight);
 
-        // Core base mirroring line
+        // Core base mirroring layout line
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -299,7 +299,7 @@ function beginCanvasRenderMatrix() {
             let scalarRatio = valueByte / 255;
             let allocationLimit = viewHeight * 0.55;
             
-            // Core upgrade connection: Calculate bar depth via slider modifier parameter
+            // Apply gain slider scale modifier variable parameters dynamically 
             let barHeight = scalarRatio * allocationLimit * visualizerSensitivityMultiplier;
 
             if (barHeight > viewHeight * 0.62) barHeight = viewHeight * 0.62; // Envelope safety layout guard
@@ -337,7 +337,7 @@ function beginCanvasRenderMatrix() {
             }
         }
 
-        // Diagnostics Standby line tracker: creates fluid motion if track contains low frequency signals
+        // Diagnostics Standby line tracker
         if (!activeSignalDetected) {
             const idleTime = Date.now() * 0.004;
             ctx.fillStyle = 'rgba(0, 240, 255, 0.15)';
@@ -348,7 +348,7 @@ function beginCanvasRenderMatrix() {
     renderFrameLoop();
 }
 
-// Global text string data layout storage to back up copy actions
+// Global text data buffer trace storage to secure copy routines
 let currentConsoleBufferText = ""; 
 function copyConsoleBuffer() {
     const outputBox = document.getElementById('code-preview-box');
@@ -356,4 +356,4 @@ function copyConsoleBuffer() {
     const textToCopy = outputBox.value || currentConsoleBufferText;
     navigator.clipboard.writeText(textToCopy);
     alert("📋 Raw text chunk successfully copied to system clipboard frame!");
-                                }
+        }
