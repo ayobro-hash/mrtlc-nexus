@@ -3,107 +3,274 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MRTLC v3.0 - Nexus Edition</title>
+    <title>MRTLC v3.0 - Nexus Dashboard</title>
     <style>
+        /* CORE DYNAMIC MATRIX VARIABLES */
         :root { 
-            --bg: #0a0a0f; 
-            --panel: #12121a; 
-            --border: #262636; 
-            --neon-blue: #00f0ff; 
+            --bg: #06060a; 
+            --panel: #0d0d14; 
+            --border: #1e1e2f; 
+            --accent: #00f0ff; 
+            --accent-glow: rgba(0, 240, 255, 0.2);
             --neon-green: #39ff14; 
             --neon-purple: #bd00ff; 
             --text: #e2e8f0; 
-            --text-muted: #64748b; 
+            --text-muted: #4e4e6a; 
         }
-        body { background-color: var(--bg); color: var(--text); font-family: 'Courier New', monospace; padding: 15px; margin: 0; box-sizing: border-box; }
-        .app-container { max-width: 600px; margin: 0 auto; background: var(--panel); border: 1px solid var(--border); padding: 20px; border-radius: 16px; box-shadow: 0 0 30px rgba(0, 240, 255, 0.05); }
-        
-        .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid var(--border); padding-bottom: 15px; margin-bottom: 20px; }
-        h1 { font-size: 1.6rem; margin: 0; color: var(--neon-blue); text-shadow: 0 0 10px rgba(0, 240, 255, 0.3); font-weight: 900; }
-        .badge { background: rgba(189, 0, 255, 0.2); color: var(--neon-purple); border: 1px solid var(--neon-purple); font-size: 11px; padding: 4px 10px; border-radius: 6px; text-shadow: 0 0 5px var(--neon-purple); }
-        
-        .status-panel { background: rgba(0, 240, 255, 0.02); border: 1px dashed var(--neon-blue); padding: 12px; border-radius: 8px; font-size: 12px; margin-bottom: 15px; color: var(--neon-blue); display: flex; justify-content: space-between; }
-        
-        .nav-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-        .tab-btn { background: #11111b; border: 1px solid var(--border); color: var(--text-muted); padding: 12px; border-radius: 8px; font-family: monospace; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        .tab-btn.active { border-color: var(--neon-blue); color: var(--neon-blue); box-shadow: 0 0 10px rgba(0, 240, 255, 0.15); background: rgba(0, 240, 255, 0.02); }
 
-        .grid-tags { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 20px; }
-        .tag { background: #161622; border: 1px solid var(--border); text-align: center; padding: 8px 0; border-radius: 6px; font-size: 11px; font-weight: bold; color: var(--text-muted); }
-        .tag.active-xml { border-color: var(--neon-green); color: var(--neon-green); box-shadow: 0 0 8px rgba(57, 255, 20, 0.1); }
-        .tag.active-bin { border-color: var(--neon-purple); color: var(--neon-purple); box-shadow: 0 0 8px rgba(189, 0, 255, 0.1); }
+        body { 
+            background-color: var(--bg); 
+            color: var(--text); 
+            font-family: 'Courier New', monospace; 
+            padding: 10px; 
+            margin: 0; 
+            box-sizing: border-box; 
+            transition: background 0.3s, color 0.3s;
+        }
 
-        .drop-zone { border: 2px dashed var(--border); padding: 40px 20px; text-align: center; border-radius: 12px; background: rgba(255,255,255,0.01); transition: 0.2s; cursor: pointer; }
-        .drop-zone:active { border-color: var(--neon-blue); background: rgba(0, 240, 255, 0.02); }
-        .drop-icon { font-size: 32px; filter: drop-shadow(0 0 8px var(--neon-blue)); margin-bottom: 10px; display: block; }
+        /* DASHBOARD GRID SYSTEM */
+        .dashboard-container { 
+            max-width: 900px; 
+            margin: 10px auto; 
+            display: grid; 
+            grid-template-columns: 1fr;
+            gap: 15px; 
+        }
+
+        @media(min-width: 768px) {
+            .dashboard-container { grid-template-columns: 220px 1fr; }
+        }
+
+        /* SIDE PANEL NAVIGATION */
+        .sidebar { 
+            background: var(--panel); 
+            border: 1px solid var(--border); 
+            padding: 15px; 
+            border-radius: 12px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+
+        .brand-section {
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 12px;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+
+        .brand-section h1 { 
+            font-size: 1.3rem; 
+            margin: 0; 
+            color: var(--accent); 
+            text-shadow: 0 0 10px var(--accent-glow); 
+            font-weight: 900; 
+        }
+
+        .dash-btn { 
+            background: #09090e; 
+            border: 1px solid var(--border); 
+            color: var(--text-muted); 
+            padding: 12px 15px; 
+            border-radius: 8px; 
+            font-family: monospace; 
+            font-weight: bold; 
+            cursor: pointer; 
+            text-align: left;
+            transition: all 0.2s ease;
+        }
+
+        .dash-btn.active { 
+            border-color: var(--accent); 
+            color: var(--accent); 
+            box-shadow: 0 0 12px var(--accent-glow); 
+            background: rgba(0, 240, 255, 0.02); 
+        }
+
+        /* MAIN MONITOR FRAME */
+        .main-workspace { 
+            background: var(--panel); 
+            border: 1px solid var(--border); 
+            padding: 20px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 25px rgba(0,0,0,0.6);
+            min-height: 450px;
+        }
+
+        /* CONSOLE & CONTROLS CONFIGURATION */
+        .status-panel { 
+            background: rgba(0, 0, 0, 0.3); 
+            border-left: 3px solid var(--accent); 
+            padding: 12px; 
+            border-radius: 4px; 
+            font-size: 11px; 
+            margin-bottom: 20px; 
+            color: var(--accent); 
+            display: flex; 
+            justify-content: space-between; 
+        }
+
+        .grid-tags { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 15px; }
+        .tag { background: #07070a; border: 1px solid var(--border); text-align: center; padding: 6px 0; border-radius: 4px; font-size: 10px; font-weight: bold; color: var(--text-muted); }
+        .tag.active-xml { border-color: var(--neon-green); color: var(--neon-green); }
+        .tag.active-bin { border-color: var(--neon-purple); color: var(--neon-purple); }
+
+        .drop-zone { border: 2px dashed var(--border); padding: 35px 15px; text-align: center; border-radius: 10px; background: rgba(0,0,0,0.2); transition: 0.2s; cursor: pointer; }
+        .drop-zone:active { border-color: var(--accent); }
+        .drop-icon { font-size: 28px; margin-bottom: 8px; display: block; }
         
-        .file-loaded { display: none; background: rgba(57, 255, 20, 0.1); border: 1px solid var(--neon-green); color: var(--neon-green); padding: 10px; border-radius: 6px; margin-top: 15px; font-size: 12px; font-weight: bold; }
+        .file-loaded { display: none; background: rgba(57, 255, 20, 0.05); border: 1px solid var(--neon-green); color: var(--neon-green); padding: 10px; border-radius: 6px; margin-top: 15px; font-size: 11px; }
 
-        button.main-btn { background: linear-gradient(135deg, #0072ff, #00f0ff); color: white; border: none; width: 100%; padding: 15px; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; margin-top: 20px; box-shadow: 0 4px 15px rgba(0, 240, 255, 0.2); transition: 0.2s; font-family: monospace; }
-        button.main-btn:active { transform: scale(0.98); }
-        button.main-btn:disabled { background: #1f1f2e !important; color: #4a4a6a !important; box-shadow: none !important; cursor: not-allowed; border: 1px solid var(--border); }
+        button.main-btn { background: var(--accent); color: #000; border: none; width: 100%; padding: 14px; border-radius: 8px; font-weight: bold; font-size: 0.95rem; cursor: pointer; margin-top: 15px; transition: 0.2s; font-family: monospace; text-shadow: 0 0 2px rgba(0,0,0,0.2); }
+        button.main-btn:disabled { background: #151522 !important; color: #3a3a4f !important; cursor: not-allowed; border: 1px solid var(--border); }
 
-        .preview-label { font-size: 13px; color: var(--text-muted); margin-top: 25px; margin-bottom: 5px; display: block; text-transform: uppercase; letter-spacing: 1px; }
-        .terminal-box { background: #050508; border: 1px solid var(--border); padding: 12px; border-radius: 8px; max-height: 150px; overflow-y: auto; font-size: 12px; color: #8892b0; }
-        .tree-node { margin-left: 15px; border-left: 1px dotted #333; padding-left: 10px; margin-top: 4px; }
+        .preview-label { font-size: 11px; color: #52527a; margin-top: 20px; margin-bottom: 5px; display: block; text-transform: uppercase; letter-spacing: 1px; }
+        .terminal-box { background: #040407; border: 1px solid var(--border); padding: 12px; border-radius: 6px; max-height: 120px; overflow-y: auto; font-size: 11px; color: #727293; }
+        .tree-node { margin-left: 12px; border-left: 1px dotted #252538; padding-left: 8px; margin-top: 4px; }
         
-        textarea { width: 100%; height: 100px; background: #050508; color: var(--neon-green); border: 1px solid var(--border); padding: 10px; border-radius: 8px; font-family: monospace; font-size: 11px; margin-top: 10px; resize: none; box-sizing: border-box; }
+        textarea { width: 100%; height: 90px; background: #040407; color: var(--neon-green); border: 1px solid var(--border); padding: 10px; border-radius: 6px; font-family: monospace; font-size: 11px; margin-top: 8px; resize: none; box-sizing: border-box; }
         
-        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px; }
-        .btn-sec { background: transparent; border: 1px solid var(--border); color: var(--text); box-shadow: none; padding: 15px; border-radius: 8px; font-weight: bold; font-family: monospace; cursor: pointer; }
-        .btn-sec:active { background: rgba(255,255,255,0.05); }
-        .btn-success { background: linear-gradient(135deg, #00b09b, #96c93d); box-shadow: 0 4px 15px rgba(150, 201, 61, 0.2); border: none; color: white; border-radius: 8px; font-weight: bold; font-family: monospace; cursor: pointer; }
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+        .btn-sec { background: transparent; border: 1px solid var(--border); color: var(--text); padding: 12px; border-radius: 6px; font-weight: bold; font-family: monospace; cursor: pointer; }
+        .btn-success { background: var(--neon-green); border: none; color: #000; border-radius: 6px; font-weight: bold; font-family: monospace; cursor: pointer; }
 
-        #visualizer-canvas { width: 100%; height: 240px; background: #050508; border: 1px solid var(--border); border-radius: 12px; margin-top: 15px; box-shadow: inset 0 0 20px rgba(0,0,0,0.8); }
+        #visualizer-canvas { width: 100%; height: 220px; background: #040407; border: 1px solid var(--border); border-radius: 8px; margin-top: 15px; }
+
+        /* SETTINGS GRID SHEETS */
+        .settings-card { background: #08080c; border: 1px solid var(--border); padding: 15px; border-radius: 8px; margin-bottom: 12px; }
+        .theme-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
+        .theme-dot { padding: 10px 5px; font-size: 11px; font-weight: bold; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; text-align: center; color: white; background: #111; }
     </style>
 </head>
 <body>
 
-    <div class="app-container">
-        <div class="header">
-            <h1>MRTLC NEXUS</h1>
-            <span class="badge">v3.0 OFFICIAL</span>
+    <div class="dashboard-container">
+        
+        <div class="sidebar">
+            <div class="brand-section">
+                <h1>NEXUS DOCK</h1>
+                <span style="font-size: 9px; color: var(--text-muted);">V3.0 CORE ENGINE</span>
+            </div>
+            <button id="pane-parser-btn" class="dash-btn active" onclick="switchDashboardPane('parser')">📂 CODE PARSER</button>
+            <button id="pane-visualizer-btn" class="dash-btn" onclick="switchDashboardPane('visualizer')">🎵 AUDIO MATRIX</button>
+            <button id="pane-settings-btn" class="dash-btn" onclick="switchDashboardPane('settings')">⚙️ CONSOLE SETS</button>
         </div>
 
-        <div class="status-panel">
-            <span>⚡ MATRIX ENGINE STATUS:</span>
-            <span id="engine-status" style="color: var(--neon-green); font-weight: bold;">STANDBY</span>
-        </div>
-
-        <div class="nav-tabs">
-            <button id="tab-parser-btn" class="tab-btn active" onclick="switchNexusTab('parser')">📂 CODE PARSER</button>
-            <button id="tab-visualizer-btn" class="tab-btn" onclick="switchNexusTab('visualizer')">🎵 AUDIO MATRIX</button>
-        </div>
-
-        <div id="nexus-parser-view">
-            <div class="grid-tags">
-                <div class="tag active-xml">.RBXLX</div>
-                <div class="tag active-xml">.RBXMX</div>
-                <div class="tag active-bin">.RBXL</div>
-                <div class="tag active-bin">.RBXM</div>
+        <div class="main-workspace">
+            
+            <div class="status-panel">
+                <span>⚡ CORE ENGINE STATE:</span>
+                <span id="engine-status" style="font-weight: bold;">STANDBY</span>
             </div>
 
-            <div class="drop-zone" onclick="document.getElementById('file-input').click()">
-                <span class="drop-icon">🚀</span>
-                <span style="font-size: 13px; color: var(--text-muted);">INITIALIZE BINARY OR XML ASSET CODES</span>
-                <input type="file" id="file-input" accept=".rbxlx,.rbxmx,.rbxl,.rbxm" style="display:none" onchange="processFileSelection(this)">
-                <div id="file-status-box" class="file-loaded"></div>
+            <div id="dash-parser-view">
+                <div class="grid-tags">
+                    <div class="tag active-xml">.RBXLX</div>
+                    <div class="tag active-xml">.RBXMX</div>
+                    <div class="tag active-bin">.RBXL</div>
+                    <div class="tag active-bin">.RBXM</div>
+                </div>
+
+                <div class="drop-zone" onclick="document.getElementById('file-input').click()">
+                    <span class="drop-icon" style="color: var(--accent)">🚀</span>
+                    <span style="font-size: 11px; color: var(--text-muted);">MOUNT BINARY / XML COMPONENT CLUSTERS</span>
+                    <input type="file" id="file-input" accept=".rbxlx,.rbxmx,.rbxl,.rbxm" style="display:none" onchange="processFileSelection(this)">
+                    <div id="file-status-box" class="file-loaded"></div>
+                </div>
+
+                <button id="main-compile-btn" class="main-btn" onclick="executeNexusCompilation()" disabled>⚙️ START RECONSTRUCT STREAM</button>
+
+                <span class="preview-label">📂 TOPOLOGY MAP OUTLINE</span>
+                <div id="tree-view" class="terminal-box"><i>Awaiting asset sequence mount configuration...</i></div>
+
+                <span class="preview-label">📜 SYSTEM OUTPUT STREAM LOGIC</span>
+                <textarea id="code-preview-box" readonly placeholder="Trace diagnostics data pipeline fields..."></textarea>
+
+                <div class="action-grid">
+                    <button class="btn-sec" onclick="copyConsoleBuffer()">📋 COPY CACHE</button>
+                    <button id="download-btn" class="btn-success" onclick="triggerScriptDownload()" disabled>💾 EXPORT LUA</button>
+                </div>
             </div>
 
-            <button id="main-compile-btn" class="main-btn" onclick="executeNexusCompilation()" disabled>⚙️ START RECONSTRUCT STREAM</button>
+            <div id="dash-visualizer-view" style="display: none;">
+                <div class="drop-zone" onclick="document.getElementById('audio-input').click()">
+                    <span class="drop-icon" style="color: var(--neon-purple)">🎧</span>
+                    <span style="font-size: 11px; color: var(--text-muted);">STREAM LOCAL SIGNAL FREQUENCY ARCHIVES</span>
+                    <input type="file" id="audio-input" accept="audio/*" style="display:none" onchange="processAudioSelection(this)">
+                    <div id="audio-status-box" class="file-loaded"></div>
+                </div>
 
-            <span class="preview-label">📂 HIERARCHICAL TOPOLOGY INVERSION</span>
-            <div id="tree-view" class="terminal-box"><i>Awaiting pipeline feed upload structure...</i></div>
-
-            <span class="preview-label">📜 CODE DATA MATRIX ROW CONSOLE</span>
-            <textarea id="code-preview-box" readonly placeholder="System console output trace logs..."></textarea>
-
-            <div class="action-grid">
-                <button class="btn-sec" onclick="copyConsoleBuffer()">📋 COPY CACHE</button>
-                <button id="download-btn" class="btn-success" onclick="triggerScriptDownload()" disabled>💾 EXPORT SCRIPT</button>
+                <canvas id="visualizer-canvas"></canvas>
+                
+                <span class="preview-label">📟 MATH TRANSLATION FIELD MATRIX</span>
+                <div class="terminal-box" style="color: var(--accent); border-color: var(--accent);">
+                    ⚡ FFT SAMPLES: 256 CHANNELS // REALTIME HARDWARE AUDIO BUFFER INJECTIONS COMPLETED
+                </div>
             </div>
+
+            <div id="dash-settings-view" style="display: none;">
+                <div class="settings-card">
+                    <span style="font-weight: bold; font-size: 12px; color: var(--accent);">🛠️ DOCK THEME MATRIX SELECTION</span>
+                    <p style="font-size: 11px; color: var(--text-muted); margin: 5px 0 10px 0;">Configure your visual interface color mapping configurations.</p>
+                    
+                    <div class="theme-selector">
+                        <div class="theme-dot" style="border-color: #00f0ff; background: #041014;" onclick="applyNexusTheme('cyber')">CYBER</div>
+                        <div class="theme-dot" style="border-color: #39ff14; background: #061406;" onclick="applyNexusTheme('matrix')">MATRIX</div>
+                        <div class="theme-dot" style="border-color: #ff5500; background: #140804;" onclick="applyNexusTheme('solar')">SOLAR</div>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <span style="font-weight: bold; font-size: 12px; color: var(--accent);">🛰️ MEMORY PIPELINE STORAGE CLEAR</span>
+                    <p style="font-size: 11px; color: var(--text-muted); margin: 5px 0 10px 0;">Force drop current processing cache stacks and safely stop current running nodes.</p>
+                    <button class="btn-sec" style="width:100%; border-color:#ff3333; color:#ff3333; padding: 10px;" onclick="location.reload()">☢️ HARD FACTORY FLUSH REBOOT</button>
+                </div>
+            </div>
+
         </div>
+    </div>
 
+    <script src="nexus-ui.js"></script>
+    <script src="nexus-parser.js"></script>
+    
+    <script>
+        // Set dynamic state indicators
+        document.getElementById('engine-status').style.color = "var(--accent)";
+
+        function switchDashboardPane(targetPane) {
+            const views = ['parser', 'visualizer', 'settings'];
+            views.forEach(v => {
+                document.getElementById(`dash-${v}-view`).style.display = (v === targetPane) ? 'block' : 'none';
+                document.getElementById(`pane-${v}-btn`).classList.toggle('active', v === targetPane);
+            });
+        }
+
+        function applyNexusTheme(theme) {
+            const root = document.documentElement;
+            if (theme === 'cyber') {
+                root.style.setProperty('--accent', '#00f0ff');
+                root.style.setProperty('--accent-glow', 'rgba(0, 240, 255, 0.2)');
+                root.style.setProperty('--border', '#1e1e2f');
+            } else if (theme === 'matrix') {
+                root.style.setProperty('--accent', '#39ff14');
+                root.style.setProperty('--accent-glow', 'rgba(57, 255, 20, 0.2)');
+                root.style.setProperty('--border', '#122b12');
+            } else if (theme === 'solar') {
+                root.style.setProperty('--accent', '#ff5500');
+                root.style.setProperty('--accent-glow', 'rgba(255, 85, 0, 0.2)');
+                root.style.setProperty('--border', '#38160b');
+            }
+            
+            // Sync current configuration state color systems
+            const engineState = document.getElementById('engine-status');
+            if (engineState.innerText === "STANDBY") {
+                engineState.style.color = "var(--accent)";
+            }
+        }
+    </script>
+</body>
+</html>
         <div id="nexus-visualizer-view" style="display: none;">
             <div class="drop-zone" onclick="document.getElementById('audio-input').click()">
                 <span class="drop-icon">🎧</span>
