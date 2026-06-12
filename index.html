@@ -1,10 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MRTLC v3.5 - Aero Glass Edition</title>
+    <style>
+        /* AERO LIQUID GLASS VARIABLE ENGINE */
+        :root { 
+            --bg: #040406;
+            --glass-base: rgba(10, 12, 22, 0.45);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --accent: #00f0ff; 
+            --accent-glow: rgba(0, 240, 255, 0.4);
+            --neon-green: #39ff14; 
+            --neon-purple: #bd00ff; 
+            --text: #ffffff; 
+            --text-muted: #7e8092; 
+        }
+
+        body { 
+            background-color: var(--bg); 
+            color: var(--text); 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 15px; 
+            margin: 0; 
+            box-sizing: border-box; 
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            background-image: 
+                radial-gradient(circle at 20% 20%, rgba(0, 240, 255, 0.12), transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(189, 0, 255, 0.12), transparent 40%);
+            transition: background 0.4s;
+        }
+
+        /* CENTRALIZED COMPACT POD CONTAINER */
+        .app-container { 
+            width: 100%;
+            max-width: 600px; 
+            background: var(--glass-base); 
+            border: 1px solid var(--glass-border); 
+            padding: 24px; 
+            border-radius: 24px; 
+            backdrop-filter: blur(30px) saturate(160%);
+            -webkit-backdrop-filter: blur(30px) saturate(160%);
+            box-shadow: 
+                0 20px 50px rgba(0, 0, 0, 0.4),
+                inset 0 1px 2px rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* LIGHT REFRACTIVE SHEEN OVERLAY */
+        .app-container::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 50%;
+            background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 60%);
+            pointer-events: none;
+            border-radius: 24px 24px 0 0;
+        }
+        
+        .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--glass-border); padding-bottom: 16px; margin-bottom: 20px; }
+        h1 { font-size: 1.4rem; margin: 0; font-weight: 800; letter-spacing: 0.5px; color: #fff; text-shadow: 0 0 12px var(--accent-glow); }
+        .badge { background: rgba(255, 255, 255, 0.07); border: 1px solid var(--glass-border); color: #fff; font-size: 10px; padding: 4px 10px; border-radius: 20px; font-family: monospace; }
+        
+        .status-panel { background: rgba(0, 0, 0, 0.25); border-left: 3px solid var(--accent); padding: 12px; border-radius: 6px; font-size: 11px; margin-bottom: 20px; color: var(--accent); font-family: monospace; display: flex; justify-content: space-between; }
+        
+        .nav-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 20px; }
+        .tab-btn { background: rgba(0, 0, 0, 0.2); border: 1px solid var(--glass-border); color: var(--text-muted); padding: 12px; border-radius: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .tab-btn:hover { background: rgba(255,255,255,0.03); color: #fff; }
+        .tab-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(255, 255, 255, 0.03); box-shadow: 0 0 15px var(--accent-glow); }
+
+        .grid-tags { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 20px; }
+        .tag { background: rgba(0,0,0,0.15); border: 1px solid var(--glass-border); text-align: center; padding: 6px 0; border-radius: 6px; font-size: 11px; font-weight: bold; color: var(--text-muted); font-family: monospace; }
+        .tag.active-xml { border-color: var(--neon-green); color: var(--neon-green); }
+        .tag.active-bin { border-color: var(--neon-purple); color: var(--neon-purple); }
+
+        .drop-zone { border: 2px dashed var(--glass-border); padding: 40px 20px; text-align: center; border-radius: 16px; background: rgba(0,0,0,0.1); transition: 0.2s; cursor: pointer; }
+        .drop-zone:hover { border-color: var(--accent); background: rgba(255,255,255,0.01); }
+        .drop-icon { font-size: 32px; filter: drop-shadow(0 0 8px var(--accent-glow)); margin-bottom: 10px; display: block; }
+        .file-loaded { display: none; background: rgba(255,255,255,0.05); border: 1px solid var(--accent); color: var(--accent); padding: 10px; border-radius: 8px; margin-top: 15px; font-size: 12px; font-family: monospace; }
+
+        button.main-btn { background: #fff; color: #000; border: none; width: 100%; padding: 14px; border-radius: 10px; font-weight: bold; font-size: 0.95rem; cursor: pointer; margin-top: 20px; transition: 0.2s; box-shadow: 0 4px 15px rgba(255,255,255,0.1); }
+        button.main-btn:hover:not(:disabled) { background: var(--accent); box-shadow: 0 0 20px var(--accent-glow); }
+        button.main-btn:disabled { background: rgba(255,255,255,0.03) !important; color: #4a4a5a !important; cursor: not-allowed; border: 1px solid var(--glass-border); box-shadow: none; }
+
+        .preview-label { font-size: 11px; color: var(--text-muted); margin-top: 25px; margin-bottom: 5px; display: block; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+        .terminal-box { background: rgba(0, 0, 0, 0.3); border: 1px solid var(--glass-border); padding: 12px; border-radius: 8px; max-height: 120px; overflow-y: auto; font-size: 11px; color: #a0a0b5; font-family: monospace; }
+        .tree-node { margin-left: 15px; border-left: 1px dotted rgba(255,255,255,0.1); padding-left: 10px; margin-top: 4px; }
+        
+        textarea { width: 100%; height: 100px; background: rgba(0, 0, 0, 0.3); color: var(--accent); border: 1px solid var(--glass-border); padding: 10px; border-radius: 8px; font-family: monospace; font-size: 11px; margin-top: 10px; resize: none; box-sizing: border-box; outline: none; }
+        
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px; }
+        .btn-sec { background: transparent; border: 1px solid var(--glass-border); color: var(--text); padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.85rem; transition: 0.2s; }
+        .btn-sec:hover { background: rgba(255,255,255,0.05); }
+        .btn-success { background: rgba(255,255,255,0.05); border: 1px solid var(--accent); color: var(--accent); border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.85rem; transition: 0.2s; }
+        .btn-success:hover:not(:disabled) { background: var(--accent); color: #000; box-shadow: 0 0 15px var(--accent-glow); }
+        .btn-success:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        #visualizer-canvas { width: 100%; height: 240px; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--glass-border); border-radius: 14px; margin-top: 15px; display: block; }
+        .theme-panel { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 5px; }
+        .theme-chip { background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 12px; text-align: center; border-radius: 8px; font-size: 11px; font-weight: bold; cursor: pointer; font-family: monospace; }
+        .theme-chip:hover { background: rgba(255,255,255,0.03); }
+    </style>
 </head>
 <body>
 
     <div class="app-container">
+        
         <div class="header">
             <h1>MRTLC NEXUS</h1>
-            <span class="badge">AERO GLASS v4.0</span>
+            <span class="badge">AERO GLASS v3.5</span>
         </div>
 
         <div class="status-panel">
@@ -25,17 +137,22 @@
                 <div class="tag active-bin">.RBXL</div>
                 <div class="tag active-bin">.RBXM</div>
             </div>
+
             <div class="drop-zone" onclick="document.getElementById('file-input').click()">
                 <span class="drop-icon">💿</span>
                 <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">MOUNT WORKSPACE FILE MATRIX CHUNKS</span>
                 <input type="file" id="file-input" accept=".rbxlx,.rbxmx,.rbxl,.rbxm" style="display:none" onchange="processFileSelection(this)">
                 <div id="file-status-box" class="file-loaded"></div>
             </div>
+
             <button id="main-compile-btn" class="main-btn" onclick="executeNexusCompilation()" disabled>COMPILE SOURCE CHUNKS</button>
+
             <span class="preview-label">📂 STRUCTURE DECOMPOSITION STRUCT</span>
             <div id="tree-view" class="terminal-box"><i>Awaiting sequence data array mount...</i></div>
+
             <span class="preview-label">📜 PARSED SCRIPT CONSOLE PREVIEW</span>
             <textarea id="code-preview-box" readonly placeholder="System console output trace streams..."></textarea>
+
             <div class="action-grid">
                 <button class="btn-sec" onclick="copyConsoleBuffer()">📋 COPY DATA</button>
                 <button id="download-btn" class="btn-success" onclick="triggerScriptDownload()" disabled>💾 EXPORT LUA</button>
@@ -49,6 +166,7 @@
                 <input type="file" id="audio-input" accept="audio/*" style="display:none" onchange="processAudioSelection(this)">
                 <div id="audio-status-box" class="file-loaded"></div>
             </div>
+
             <canvas id="visualizer-canvas"></canvas>
         </div>
 
@@ -59,18 +177,21 @@
                 <div class="theme-chip" style="color: #39ff14; border-color: rgba(57,255,20,0.2);" onclick="applyGlassTheme('matrix')">BIO MATRIX</div>
                 <div class="theme-chip" style="color: #ffaa00; border-color: rgba(255,170,0,0.2);" onclick="applyGlassTheme('solar')">AMBER SUN</div>
             </div>
+
             <span class="preview-label">🖼️ CORE SYSTEM WALLPAPER COMPONENT</span>
             <div style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 15px; border-radius: 12px; margin-top: 10px;">
                 <button class="btn-success" style="width: 100%; margin-bottom: 10px; padding: 10px;" onclick="document.getElementById('wallpaper-input').click()">📁 MOUNT CUSTOM BACKGROUND</button>
                 <input type="file" id="wallpaper-input" accept="image/*" style="display:none" onchange="processWallpaperUpload(this)">
                 <button class="btn-sec" style="width: 100%; border-color: rgba(255,255,255,0.1); font-size: 11px; padding: 8px;" onclick="clearSavedWallpaper()">🗑️ REMOVE BACKGROUND</button>
             </div>
+
             <span class="preview-label">🛰️ MEMORY SUBSYSTEM ARCHIVE CONTROL</span>
             <button class="btn-sec" style="width: 100%; border-color: #ff3333; color: #ff3333; margin-top: 10px; font-weight: bold;" onclick="location.reload()">☢️ FLUSH SYSTEM MEMORY REBOOT</button>
         </div>
+
     </div>
 
     <script src="nexus-ui.js"></script>
     <script src="nexus-parser.js"></script>
 </body>
-                                             </html>
+</html>
