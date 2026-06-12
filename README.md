@@ -1,4 +1,4 @@
-i# 🪐 MRTLC Nexus v4.0
+# 🪐 MRTLC Nexus v4.0
 
 ## 🔗 [Launch Live Dashboard Matrix](https://ayobro-hash.github.io/mrtlc-nexus/)
 
