@@ -1,0 +1,12 @@
+# System temporary memory caches
+.DS_Store
+*.log
+.cache/
+
+# Local Node architecture packages
+node_modules/
+package-lock.json
+
+# Local Environment Secret Vectors
+.env
+*.local
