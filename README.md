@@ -1,4 +1,4 @@
-# 🪐 MRTLC Nexus v4.0
+i# 🪐 MRTLC Nexus v4.0
 
 ## 🔗 [Launch Live Dashboard Matrix](https://ayobro-hash.github.io/mrtlc-nexus/)
 
@@ -20,4 +20,5 @@ npm install
 # Start the local engine
 node server.js
 ```
+also music visualizer doesn't work but sound itself work
 Maintained and created by @ayobro-hash
