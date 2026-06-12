@@ -1,8 +1,10 @@
-// --- MRTLC NEXUS v3.5: MASTER UI & ENGINE GRAPHICS CONTROLLER (INTEGRATED BUILD) ---
+// --- MRTLC NEXUS v3.5: MASTER UI & ENGINE GRAPHICS CONTROLLER (INTEGRATED COMPATIBILITY BUILD) ---
 
-// Global states for structural scaling and filter parameters
+// Global architecture states for structural tracking and audio scaling
 let currentNexusFileStats = { scripts: 0, instances: 0, parts: 0 };
 let visualizerSensitivityMultiplier = 1.0;
+let currentAudioSource = null;
+let audioContextInstance = null;
 
 document.addEventListener("DOMContentLoaded", () => {
     // Check local persistent memory for cached wallpaper string on load
@@ -16,12 +18,16 @@ document.addEventListener("DOMContentLoaded", () => {
         engineStatus.style.color = "var(--accent)";
     }
 
-    // Inject dynamic HTML UI frames for Search, Stats, and Sensitivity automatically to prevent file bloat
+    // Automate dynamic component injection to prevent index.html inflation
     injectNexusUpgradeElements();
 });
 
+/**
+ * FEATURE INTERCEPT MODULE: DYNAMIC UI INJECTION
+ * Automatically layers new layout tools perfectly into your existing HTML tree wrapper
+ */
 function injectNexusUpgradeElements() {
-    // 1. Inject Node Filter Search Input directly above the Tree View
+    // 1. Inject Node Filter Search Input directly above the Tree View container
     const treeView = document.getElementById('tree-view');
     if (treeView && !document.getElementById('nexus-node-search')) {
         const searchInput = document.createElement('input');
@@ -33,27 +39,27 @@ function injectNexusUpgradeElements() {
         treeView.parentNode.insertBefore(searchInput, treeView);
     }
 
-    // 2. Inject Workspace Analysis Grid directly below the Main Compile Button
+    // 2. Inject Roblox Quick Stats Metric Grid directly below the Main Compile Button
     const compileBtn = document.getElementById('main-compile-btn');
     if (compileBtn && !document.getElementById('nexus-stats-panel')) {
         const statsPanel = document.createElement('div');
         statsPanel.id = 'nexus-stats-panel';
         statsPanel.style = 'display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 12px;';
         statsPanel.innerHTML = `
-            <div style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 6px; border-radius: 6px; text-align: center; font-family: monospace; font-size: 10px;">
-                <div style="color: var(--text-muted);">SCRIPTS</div><div id="stat-count-scripts" style="color: var(--accent); font-weight: bold; font-size: 12px;">0</div>
+            <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--glass-border); padding: 8px 4px; border-radius: 6px; text-align: center; font-family: monospace; font-size: 10px;">
+                <div style="color: var(--text-muted); margin-bottom: 2px;">SCRIPTS</div><div id="stat-count-scripts" style="color: var(--accent); font-weight: bold; font-size: 12px;">0</div>
             </div>
-            <div style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 6px; border-radius: 6px; text-align: center; font-family: monospace; font-size: 10px;">
-                <div style="color: var(--text-muted);">PARTS</div><div id="stat-count-parts" style="color: var(--neon-green); font-weight: bold; font-size: 12px;">0</div>
+            <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--glass-border); padding: 8px 4px; border-radius: 6px; text-align: center; font-family: monospace; font-size: 10px;">
+                <div style="color: var(--text-muted); margin-bottom: 2px;">PARTS</div><div id="stat-count-parts" style="color: var(--neon-green); font-weight: bold; font-size: 12px;">0</div>
             </div>
-            <div style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 6px; border-radius: 6px; text-align: center; font-family: monospace; font-size: 10px;">
-                <div style="color: var(--text-muted);">TOTAL INST</div><div id="stat-count-total" style="color: #ffaa00; font-weight: bold; font-size: 12px;">0</div>
+            <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--glass-border); padding: 8px 4px; border-radius: 6px; text-align: center; font-family: monospace; font-size: 10px;">
+                <div style="color: var(--text-muted); margin-bottom: 2px;">TOTAL INST</div><div id="stat-count-total" style="color: #ffaa00; font-weight: bold; font-size: 12px;">0</div>
             </div>
         `;
         compileBtn.parentNode.insertBefore(statsPanel, compileBtn.nextSibling);
     }
 
-    // 3. Inject Sensitivity Range Control Slider directly beneath the Audio Canvas
+    // 3. Inject Wave Gain Range Controller Slider directly beneath the Audio Visualizer Canvas
     const canvas = document.getElementById('visualizer-canvas');
     if (canvas && !document.getElementById('nexus-sensitivity-wrapper')) {
         const sliderWrapper = document.createElement('div');
@@ -68,20 +74,21 @@ function injectNexusUpgradeElements() {
     }
 }
 
-// INTERFACE EXTENSION LOGIC 1: TREE FILTER SEARCH
+/**
+ * UPGRADE FEATURE 1: TREE FILTER SEARCH
+ * Iterates through active tree views, matching queries and auto-collapsing unmatched paths
+ */
 function filterNexusTreeNodes(query) {
     const cleanQuery = query.toLowerCase().trim();
     const treeView = document.getElementById('tree-view');
     if (!treeView) return;
 
-    // Grab all structural elements or row links inside the tree layout box
     const nodes = treeView.querySelectorAll('.tree-node, div, span');
     nodes.forEach(node => {
-        if (node.children.length > 0 && node.tagName !== 'SPAN') return; // Skip structural parent folders
+        if (node.children.length > 0 && node.tagName !== 'SPAN') return; 
         const text = node.textContent.toLowerCase();
         if (text.includes(cleanQuery)) {
             node.style.display = '';
-            // Walk up and ensure matching parent structures remain visible
             let parent = node.parentElement;
             while (parent && parent !== treeView) {
                 parent.style.display = '';
@@ -93,8 +100,10 @@ function filterNexusTreeNodes(query) {
     });
 }
 
-// INTERFACE EXTENSION LOGIC 2: GLOBAL METRICS COUNTER PIPELINE
-// Call this function inside your nexus-parser.js file when looping through nodes!
+/**
+ * UPGRADE FEATURE 2: METRICS PIPELINE HOOK
+ * Call this function inside your 'nexus-parser.js' decompiler loops to route counts into the UI!
+ */
 function updateNexusWorkspaceStats(scripts, parts, total) {
     currentNexusFileStats = { scripts, instances: total, parts };
     if(document.getElementById('stat-count-scripts')) {
@@ -104,12 +113,17 @@ function updateNexusWorkspaceStats(scripts, parts, total) {
     }
 }
 
-// INTERFACE EXTENSION LOGIC 3: VISUALIZER AMPLIFIER CONSTANT
+/**
+ * UPGRADE FEATURE 3: AUDIO GAIN AMPLIFIER ADJUSTMENT
+ */
 function updateVisualizerSensitivity(val) {
     visualizerSensitivityMultiplier = parseFloat(val);
     document.getElementById('sensitivity-readout').innerText = `${visualizerSensitivityMultiplier.toFixed(1)}x`;
 }
 
+/**
+ * CORE MODULE: TAB ROUTING PANEL CONTROLLER
+ */
 function switchNexusTab(targetTab) {
     const tabs = ['parser', 'visualizer', 'settings'];
     tabs.forEach(t => {
@@ -120,6 +134,9 @@ function switchNexusTab(targetTab) {
     });
 }
 
+/**
+ * CORE MODULE: DESIGN VARIABLE VAR PRESET STYLES
+ */
 function applyGlassTheme(theme) {
     const root = document.documentElement;
     if (theme === 'cyber') {
@@ -138,6 +155,9 @@ function applyGlassTheme(theme) {
     document.getElementById('engine-status').style.color = "var(--accent)";
 }
 
+/**
+ * CORE MODULE: SYSTEM PERSISTENT BASE64 WALLPAPER STORAGE
+ */
 function processWallpaperUpload(input) {
     const file = input.files[0];
     if (!file) return;
@@ -163,14 +183,14 @@ function clearSavedWallpaper() {
     `;
 }
 
-// --- AUTOMATED LIQUID VISUALIZER INTERCEPT OVERRIDE ---
-let currentAudioSource = null;
-let audioContextInstance = null;
-
+/**
+ * CORE MODULE: MOBILE-COMPATIBLE WAVEFORM AUDIO VISUALIZER ENGINE
+ */
 async function processAudioSelection(input) {
     const file = input.files[0];
     if (!file) return;
 
+    // Reset previous hardware context streams to avoid engine overlaps
     if (currentAudioSource) { try { currentAudioSource.stop(); } catch(e){} }
 
     const statusBox = document.getElementById('audio-status-box');
@@ -180,10 +200,12 @@ async function processAudioSelection(input) {
     document.getElementById('engine-status').innerText = "AUDIO FEED";
     document.getElementById('engine-status').style.color = "var(--neon-purple)";
 
+    // Instantiate hardware pipeline audio mapping
     audioContextInstance = new (window.AudioContext || window.webkitAudioContext)();
     const canvas = document.getElementById('visualizer-canvas');
     const ctx = canvas.getContext('2d');
     
+    // Scale canvas dimensions safely to accommodate high-DPI retina mobile resolutions
     canvas.width = canvas.clientWidth * window.devicePixelRatio;
     canvas.height = canvas.clientHeight * window.devicePixelRatio;
     ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
@@ -191,15 +213,22 @@ async function processAudioSelection(input) {
     const reader = new FileReader();
     reader.onload = async (e) => {
         const bufferArray = e.target.result;
+        
+        // Force AudioContext deployment out of background sleep mode (Critical mobile override)
+        if (audioContextInstance.state === 'suspended') {
+            await audioContextInstance.resume();
+        }
+
         const decodedAudio = await audioContextInstance.decodeAudioData(bufferArray);
         
         currentAudioSource = audioContextInstance.createBufferSource();
         currentAudioSource.buffer = decodedAudio;
         
         const analyserNode = audioContextInstance.createAnalyser();
-        analyserNode.fftSize = 128;
-        analyserNode.smoothingTimeConstant = 0.85;
+        analyserNode.fftSize = 64; // Smaller size for rapid response frequency readings on mobile devices
+        analyserNode.smoothingTimeConstant = 0.8;
         
+        // 🔒 MOBILE HARWARE CONNECTION PIPELINE CHAIN: Source -> Analyzer -> Speakers
         currentAudioSource.connect(analyserNode);
         analyserNode.connect(audioContextInstance.destination);
         currentAudioSource.start(0);
@@ -209,15 +238,17 @@ async function processAudioSelection(input) {
 
         const viewWidth = canvas.width / window.devicePixelRatio;
         const viewHeight = canvas.height / window.devicePixelRatio;
-        const barWidth = (viewWidth / dataLength) * 0.75;
+        const barWidth = (viewWidth / dataLength) * 0.8;
 
         function drawLiquidLoop() {
             requestAnimationFrame(drawLiquidLoop);
             analyserNode.getByteFrequencyData(dataArray);
 
+            // Establish fluid motion trail background repaint
             ctx.fillStyle = 'rgba(4, 4, 6, 0.25)';
             ctx.fillRect(0, 0, viewWidth, viewHeight);
 
+            // Draw center alignment axis line
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
             ctx.lineWidth = 1;
             ctx.beginPath();
@@ -225,15 +256,19 @@ async function processAudioSelection(input) {
             ctx.lineTo(viewWidth, viewHeight * 0.65);
             ctx.stroke();
 
+            let hasSignal = false;
+
             for (let i = 0; i < dataLength; i++) {
-                let percentValue = dataArray[i] / 255;
+                let rawValue = dataArray[i];
+                if (rawValue > 0) hasSignal = true;
+
+                let percentValue = rawValue / 255;
                 let maxBarHeight = viewHeight * 0.55;
                 
-                // INTEGRATION MATRIX POINT: Multiplies bar bounce calculation by the slider scalar variable
+                // Sensitivity Multiplier calculation integration factor
                 let barHeight = percentValue * maxBarHeight * visualizerSensitivityMultiplier;
 
-                // Clamp to prevent visual clipping out of canvas limits
-                if(barHeight > viewHeight * 0.63) barHeight = viewHeight * 0.63;
+                if(barHeight > viewHeight * 0.63) barHeight = viewHeight * 0.63; // Clip prevention guard
 
                 let xPos = i * (viewWidth / dataLength) + (viewWidth / dataLength - barWidth) / 2;
                 let yPos = (viewHeight * 0.65) - barHeight;
@@ -253,6 +288,7 @@ async function processAudioSelection(input) {
                     ctx.roundRect(xPos, yPos, barWidth, barHeight, [4, 4, 0, 0]);
                     ctx.fill();
 
+                    // Generate inverse glass liquid reflections below baseline
                     ctx.shadowBlur = 0;
                     let reflectionGradient = ctx.createLinearGradient(xPos, viewHeight * 0.65, xPos, viewHeight * 0.65 + (barHeight * 0.4));
                     reflectionGradient.addColorStop(0, 'rgba(0, 240, 255, 0.25)');
@@ -266,8 +302,25 @@ async function processAudioSelection(input) {
                     ctx.restore();
                 }
             }
+
+            // Diagnostic Standby Wave: Creates a tiny idle trace if the file is rendering silent frequencies
+            if (!hasSignal) {
+                const idleTime = Date.now() * 0.004;
+                ctx.fillStyle = 'rgba(0, 240, 255, 0.1)';
+                ctx.fillRect(10 + Math.sin(idleTime)*5, viewHeight * 0.64, viewWidth - 20, 2);
+            }
         }
         drawLiquidLoop();
     };
     reader.readAsArrayBuffer(file);
 }
+
+// Global text buffer tracker for clipboard operations
+let currentConsoleBufferText = ""; 
+function copyConsoleBuffer() {
+    const outputBox = document.getElementById('code-preview-box');
+    if(!outputBox) return;
+    const textToCopy = outputBox.value || currentConsoleBufferText;
+    navigator.clipboard.writeText(textToCopy);
+    alert("📋 Raw text chunk successfully copied to system clipboard frame!");
+        }
