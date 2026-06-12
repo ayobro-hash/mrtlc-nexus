@@ -21,4 +21,5 @@ npm install
 node server.js
 ```
 also music visualizer doesn't work but sound itself work
+
 Maintained and created by @ayobro-hash
