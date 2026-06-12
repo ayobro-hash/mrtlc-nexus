@@ -1,13 +1,63 @@
 // --- MRTLC NEXUS v3.5: MASTER UI & ENGINE GRAPHICS CONTROLLER ---
 
+// EXCLUSIVE HIGH GLOW LUAU SYNTAX TOXIN HIGHLIGHTER ENGINE
+function renderLuauSyntax(rawScriptCode) {
+    const outputBox = document.getElementById('code-preview-box');
+    if (!outputBox) return;
+
+    // Safety clean for text entities
+    let escaped = rawScriptCode
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+
+    // Core regex engine highlighting loops
+    escaped = escaped.replace(/(--.*)/g, '<span class="l-com">$1</span>'); // Comments
+    escaped = escaped.replace(/(["'])(.*?)\1/g, '<span class="l-str">$1$2$1</span>'); // Strings
+    escaped = escaped.replace(/\b(\d+)\b/g, '<span class="l-num">$1</span>'); // Numbers
+    
+    // Luau structural core operators
+    const keywords = [
+        'local', 'function', 'return', 'end', 'if', 'then', 'else', 'elseif',
+        'for', 'in', 'pairs', 'ipairs', 'while', 'do', 'repeat', 'until', 'true', 'false', 'nil'
+    ];
+    keywords.forEach(word => {
+        const regex = new RegExp(`\\b${word}\\b`, 'g');
+        escaped = escaped.replace(regex, `<span class="l-key">${word}</span>`);
+    });
+
+    // Roblox API standard engines
+    const builtins = [
+        'Instance', 'Vector3', 'CFrame', 'UDim2', 'BrickColor', 'Color3', 'TweenInfo', 'Task', 
+        'game', 'workspace', 'script', 'print', 'warn', 'error', 'typeof', 'require'
+    ];
+    builtins.forEach(built => {
+        const regex = new RegExp(`\\b${built}\\b`, 'g');
+        escaped = escaped.replace(regex, `<span class="l-bi">${built}</span>`);
+    });
+
+    outputBox.innerHTML = `<code>${escaped}</code>`;
+}
+
+// Global buffer tracking engine to support clipboard commands
+let currentConsoleBufferText = ""; 
+
+// Modify your copy logic to capture the raw untagged text safely
+function copyConsoleBuffer() {
+    const outputBox = document.getElementById('code-preview-box');
+    if(!outputBox) return;
+    
+    const textToCopy = outputBox.innerText || currentConsoleBufferText;
+    navigator.clipboard.writeText(textToCopy);
+    alert("📋 Raw script chunk copied to clipboard frame!");
+}
+
 document.addEventListener("DOMContentLoaded", () => {
-    // Check local persistent memory for cached wallpaper string on load
     const savedWallpaper = localStorage.getItem("nexus_wallpaper");
     if (savedWallpaper) {
         document.body.style.backgroundImage = `url(${savedWallpaper})`;
     }
     
-    // Synchronize starting display states
     const engineStatus = document.getElementById('engine-status');
     if(engineStatus) {
         engineStatus.style.color = "var(--accent)";
@@ -169,4 +219,4 @@ async function processAudioSelection(input) {
         drawLiquidLoop();
     };
     reader.readAsArrayBuffer(file);
-        }
+                        }
