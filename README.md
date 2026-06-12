@@ -20,6 +20,7 @@ npm install
 # Start the local engine
 node server.js
 ```
-also music visualizer doesn't work but sound itself work
+> [!WARNING]
+>also music visualizer doesn't work but sound itself work
 
 Maintained and created by @ayobro-hash
