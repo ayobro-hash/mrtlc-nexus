@@ -1,31 +1,76 @@
-// --- MRTLC NEXUS MODULE: UI & AUDIO ENGINE ---
-let uploadedBlob = null;
-let generatedLuauCode = "";
-let baseFileName = "mrtlc_nexus";
+// --- MRTLC NEXUS v3.5: MASTER UI & ENGINE GRAPHICS CONTROLLER ---
+
+document.addEventListener("DOMContentLoaded", () => {
+    // Check local persistent memory for cached wallpaper string on load
+    const savedWallpaper = localStorage.getItem("nexus_wallpaper");
+    if (savedWallpaper) {
+        document.body.style.backgroundImage = `url(${savedWallpaper})`;
+    }
+    
+    // Synchronize starting display states
+    const engineStatus = document.getElementById('engine-status');
+    if(engineStatus) {
+        engineStatus.style.color = "var(--accent)";
+    }
+});
+
+function switchNexusTab(targetTab) {
+    const tabs = ['parser', 'visualizer', 'settings'];
+    tabs.forEach(t => {
+        const view = document.getElementById(`nexus-${t}-view`);
+        const btn = document.getElementById(`tab-${t}-btn`);
+        if (view) view.style.display = (t === targetTab) ? 'block' : 'none';
+        if (btn) btn.classList.toggle('active', t === targetTab);
+    });
+}
+
+function applyGlassTheme(theme) {
+    const root = document.documentElement;
+    if (theme === 'cyber') {
+        root.style.setProperty('--accent', '#00f0ff');
+        root.style.setProperty('--accent-glow', 'rgba(0, 240, 255, 0.4)');
+        root.style.setProperty('--glass-base', 'rgba(10, 12, 22, 0.45)');
+    } else if (theme === 'matrix') {
+        root.style.setProperty('--accent', '#39ff14');
+        root.style.setProperty('--accent-glow', 'rgba(57, 255, 20, 0.4)');
+        root.style.setProperty('--glass-base', 'rgba(6, 16, 8, 0.5)');
+    } else if (theme === 'solar') {
+        root.style.setProperty('--accent', '#ffaa00');
+        root.style.setProperty('--accent-glow', 'rgba(255, 170, 0, 0.4)');
+        root.style.setProperty('--glass-base', 'rgba(18, 12, 6, 0.5)');
+    }
+    document.getElementById('engine-status').style.color = "var(--accent)";
+}
+
+function processWallpaperUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const base64Image = e.target.result;
+        document.body.style.backgroundImage = `url(${base64Image})`;
+        try {
+            localStorage.setItem("nexus_wallpaper", base64Image);
+        } catch(error) {
+            alert("⚠️ Image file is too large for local browser memory. Try an optimized image size under 4MB.");
+        }
+    };
+    reader.readAsDataURL(file);
+}
+
+function clearSavedWallpaper() {
+    localStorage.removeItem("nexus_wallpaper");
+    document.body.style.backgroundImage = `
+        radial-gradient(circle at 20% 20%, rgba(0, 240, 255, 0.12), transparent 40%),
+        radial-gradient(circle at 80% 80%, rgba(189, 0, 255, 0.12), transparent 40%)
+    `;
+}
+
+// --- AUTOMATED LIQUID VISUALIZER INTERCEPT OVERRIDE ---
 let currentAudioSource = null;
 let audioContextInstance = null;
 
-// TAB CONFIGURATION DISPATCHER
-function switchNexusTab(targetTab) {
-    const parserView = document.getElementById('nexus-parser-view');
-    const visualizerView = document.getElementById('nexus-visualizer-view');
-    const parserBtn = document.getElementById('tab-parser-btn');
-    const visualizerBtn = document.getElementById('tab-visualizer-btn');
-
-    if (targetTab === 'parser') {
-        parserView.style.display = 'block';
-        visualizerView.style.display = 'none';
-        parserBtn.classList.add('active');
-        visualizerBtn.classList.remove('active');
-    } else {
-        parserView.style.display = 'none';
-        visualizerView.style.display = 'block';
-        parserBtn.classList.remove('active');
-        visualizerBtn.classList.add('active');
-    }
-}
-
-// --- MUSIC VISUALIZER ENGINE MODULE ---
 async function processAudioSelection(input) {
     const file = input.files[0];
     if (!file) return;
@@ -43,8 +88,9 @@ async function processAudioSelection(input) {
     const canvas = document.getElementById('visualizer-canvas');
     const ctx = canvas.getContext('2d');
     
-    canvas.width = canvas.clientWidth;
-    canvas.height = canvas.clientHeight;
+    canvas.width = canvas.clientWidth * window.devicePixelRatio;
+    canvas.height = canvas.clientHeight * window.devicePixelRatio;
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
 
     const reader = new FileReader();
     reader.onload = async (e) => {
@@ -55,7 +101,8 @@ async function processAudioSelection(input) {
         currentAudioSource.buffer = decodedAudio;
         
         const analyserNode = audioContextInstance.createAnalyser();
-        analyserNode.fftSize = 256;
+        analyserNode.fftSize = 128;
+        analyserNode.smoothingTimeConstant = 0.85;
         
         currentAudioSource.connect(analyserNode);
         analyserNode.connect(audioContextInstance.destination);
@@ -63,31 +110,63 @@ async function processAudioSelection(input) {
 
         const dataLength = analyserNode.frequencyBinCount;
         const dataArray = new Uint8Array(dataLength);
-        const barWidth = (canvas.width / dataLength) * 1.4;
 
-        function renderLoop() {
-            requestAnimationFrame(renderLoop);
+        const viewWidth = canvas.width / window.devicePixelRatio;
+        const viewHeight = canvas.height / window.devicePixelRatio;
+        const barWidth = (viewWidth / dataLength) * 0.75;
+
+        function drawLiquidLoop() {
+            requestAnimationFrame(drawLiquidLoop);
             analyserNode.getByteFrequencyData(dataArray);
 
-            ctx.fillStyle = '#050508';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = 'rgba(4, 4, 6, 0.25)';
+            ctx.fillRect(0, 0, viewWidth, viewHeight);
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, viewHeight * 0.65);
+            ctx.lineTo(viewWidth, viewHeight * 0.65);
+            ctx.stroke();
 
             for (let i = 0; i < dataLength; i++) {
                 let percentValue = dataArray[i] / 255;
-                let barHeight = percentValue * canvas.height * 0.85;
+                let maxBarHeight = viewHeight * 0.55;
+                let barHeight = percentValue * maxBarHeight;
 
-                let r = Math.floor(0 + (percentValue * 189));
-                let g = Math.floor(240 - (percentValue * 240));
-                let b = 255;
+                let xPos = i * (viewWidth / dataLength) + (viewWidth / dataLength - barWidth) / 2;
+                let yPos = (viewHeight * 0.65) - barHeight;
 
-                ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
-                ctx.shadowBlur = 4;
-                ctx.shadowColor = "rgba(0, 240, 255, 0.5)";
+                if (barHeight > 0) {
+                    ctx.save();
+                    
+                    let liquidGradient = ctx.createLinearGradient(xPos, yPos, xPos, viewHeight * 0.65);
+                    liquidGradient.addColorStop(0, 'var(--accent)');
+                    liquidGradient.addColorStop(1, 'rgba(189, 0, 255, 0.2)');
 
-                ctx.fillRect(i * (barWidth + 2), canvas.height - barHeight - 10, barWidth, barHeight);
+                    ctx.fillStyle = liquidGradient;
+                    ctx.shadowBlur = 12;
+                    ctx.shadowColor = 'var(--accent)';
+                    
+                    ctx.beginPath();
+                    ctx.roundRect(xPos, yPos, barWidth, barHeight, [4, 4, 0, 0]);
+                    ctx.fill();
+
+                    ctx.shadowBlur = 0;
+                    let reflectionGradient = ctx.createLinearGradient(xPos, viewHeight * 0.65, xPos, viewHeight * 0.65 + (barHeight * 0.4));
+                    reflectionGradient.addColorStop(0, 'rgba(0, 240, 255, 0.25)');
+                    reflectionGradient.addColorStop(1, 'rgba(4, 4, 6, 1)');
+
+                    ctx.fillStyle = reflectionGradient;
+                    ctx.beginPath();
+                    ctx.roundRect(xPos, viewHeight * 0.65 + 2, barWidth, barHeight * 0.4, [0, 0, 4, 4]);
+                    ctx.fill();
+
+                    ctx.restore();
+                }
             }
         }
-        renderLoop();
+        drawLiquidLoop();
     };
     reader.readAsArrayBuffer(file);
-}
+        }
