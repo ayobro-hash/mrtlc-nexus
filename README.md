@@ -1,8 +1,8 @@
-# 🪐 MRTLC Nexus v3.0
+# 🪐 MRTLC Nexus v4.0
 
 ## 🔗 [Launch Live Dashboard Matrix](https://ayobro-hash.github.io/mrtlc-nexus/)
 
-Welcome to **MRTLC Nexus v3.0**, a standalone, client-side binary processing deck...
+Welcome to **MRTLC Nexus v4.0**, a standalone, client-side binary processing deck...
 
 
 ## 🚀 Key Features
@@ -20,4 +20,4 @@ npm install
 # Start the local engine
 node server.js
 ```
-Maintained by @ayobro-hash
+Maintained and created by @ayobro-hash
