@@ -1,4 +1,4 @@
-// nexus-worker.js - Structural Character Explorer Decoder
+// nexus-worker.js - Strict Binary Type Auto-Detection Engine
 
 self.onmessage = async (event) => {
     const arrayBuffer = event.data;
@@ -11,25 +11,29 @@ self.onmessage = async (event) => {
         const bytes = new Uint8Array(arrayBuffer);
         const decoder = new TextDecoder("utf-8");
 
-        // XML Fallback check
-        if (bytes[0] === 0x3C && bytes[1] === 0x72) {
-            self.postMessage({ success: true, isXml: true, xmlData: decoder.decode(arrayBuffer) });
+        // 1. STRICT XML CHECK: Must start completely with "<roblox" text signature
+        const initialText = decoder.decode(bytes.subarray(0, 7));
+        if (initialText.startsWith("<roblox")) {
+            console.log("[MRTLC NEXUS] True plain-text XML layout confirmed.");
+            const xmlText = decoder.decode(arrayBuffer);
+            self.postMessage({ success: true, isXml: true, xmlData: xmlText });
             return;
         }
 
-        if (decoder.decode(bytes.subarray(0, 8)) !== "<roblox!") {
-            throw new Error("Invalid Roblox binary signature format.");
+        // 2. STRICT BINARY CHECK: Verify actual '<roblox!' header structure
+        const binarySignature = decoder.decode(bytes.subarray(0, 8));
+        if (binarySignature !== "<roblox!") {
+            throw new Error("Invalid or unrecognizable Roblox asset file signature format.");
         }
 
-        console.log(`[MRTLC CORE] Mapping Character Rig Structure: ${bytes.length} bytes...`);
+        console.log(`[MRTLC CORE] Processing True Binary Character Model: ${bytes.length} bytes...`);
 
-        // Global arrays to store discovered instances and names
         let instanceClasses = [];
         let instanceNames = [];
         let prntRelations = [];
-
         let cursor = 12;
 
+        // Extract through individual asset format layout streams
         while (cursor < bytes.length) {
             if (cursor + 16 > bytes.length) break;
 
@@ -45,23 +49,20 @@ self.onmessage = async (event) => {
 
             const decompressedBytes = compressedLen > 0 ? decompressLZ4(chunkData, decompressedLen) : chunkData;
 
-            // 1. Gather Object Types (INST Chunk)
             if (chunkMagic === "INST") {
                 parseInstChunk(decompressedBytes, decoder, instanceClasses);
             }
-            // 2. Gather Names (PROP Chunk where Name property lives)
             else if (chunkMagic === "PROP") {
                 parsePropChunk(decompressedBytes, decoder, instanceNames);
             }
-            // 3. Gather Parent/Child Tree Map (PRNT Chunk)
             else if (chunkMagic === "PRNT") {
                 parsePrntChunk(decompressedBytes, prntRelations);
             }
         }
 
-        // Combine collected fragments into an interactive structural layout tree
         const treeStructure = buildWorkspaceTree(instanceClasses, instanceNames, prntRelations);
 
+        // Send the real structured character model array layout straight to the parser
         self.postMessage({ success: true, isXml: false, data: treeStructure });
 
     } catch (error) {
@@ -101,17 +102,15 @@ function decompressLZ4(src, destLen) {
     return dest;
 }
 
-// --- EXPLORER CHUNK DECODERS ---
-
 function parseInstChunk(bytes, decoder, instanceClasses) {
     let p = 0;
+    if (bytes.length < 13) return;
     const classId = readInt32LE(bytes, p); p += 4;
     const classNameLen = readInt32LE(bytes, p); p += 4;
     const className = decoder.decode(bytes.subarray(p, p + classNameLen)); p += classNameLen;
-    p += 1; // Skip object format byte
+    p += 1; 
     const objectCount = readInt32LE(bytes, p); p += 4;
 
-    // Extract the collection of unique instance reference IDs
     for (let i = 0; i < objectCount; i++) {
         if (p + 4 > bytes.length) break;
         const refId = readInt32LE(bytes, p); p += 4;
@@ -121,14 +120,14 @@ function parseInstChunk(bytes, decoder, instanceClasses) {
 
 function parsePropChunk(bytes, decoder, instanceNames) {
     let p = 0;
+    if (bytes.length < 10) return;
     const totalInstances = readInt32LE(bytes, p); p += 4;
-    p += (totalInstances * 4); // skip IDs array
+    p += (totalInstances * 4); 
 
     const propNameLen = readInt32LE(bytes, p); p += 4;
     const propName = decoder.decode(bytes.subarray(p, p + propNameLen)); p += propNameLen;
     const typeByte = bytes[p++];
 
-    // If we hit the Name property chunk layout, save character limb descriptors
     if (propName === "Name" && typeByte === 0x01) {
         for (let i = 0; i < totalInstances; i++) {
             if (p + 4 > bytes.length) break;
@@ -144,10 +143,10 @@ function parsePropChunk(bytes, decoder, instanceNames) {
 
 function parsePrntChunk(bytes, prntRelations) {
     let p = 0;
-    p += 1; // skip verification format version byte
+    if (bytes.length < 5) return;
+    p += 1; 
     const objectCount = readInt32LE(bytes, p); p += 4;
     
-    // Roblox uses diff arrays to serialize parent links efficiently
     const childIds = [];
     for(let i=0; i<objectCount; i++) { childIds.push(readInt32LE(bytes, p)); p+=4; }
     const parentIds = [];
@@ -158,23 +157,18 @@ function parsePrntChunk(bytes, prntRelations) {
     }
 }
 
-// Assemble flat array arrays back into an interactive tree layout mapping
 function buildWorkspaceTree(classes, names, relations) {
-    // Apply parsed naming patterns back onto reference objects
     classes.forEach((item, index) => {
         if (names[index]) item.Name = names[index];
     });
 
     const lookup = {};
     classes.forEach(item => lookup[item.refId] = item);
-
     const rootNodes = [];
 
-    // Map parent relationships explicitly
     relations.forEach(rel => {
         const childNode = lookup[rel.child];
         const parentNode = lookup[rel.parent];
-
         if (childNode) {
             if (parentNode) {
                 parentNode.Children.push(childNode);
@@ -184,6 +178,5 @@ function buildWorkspaceTree(classes, names, relations) {
         }
     });
 
-    // Fallback if no hierarchical relationship tree data processed correctly
     return rootNodes.length > 0 ? rootNodes : [{ ClassName: "Model", Name: "Character Rig Layout", Children: classes }];
 }
