@@ -1,10 +1,10 @@
 // ============================================================================
-//   MRTLC SYSTEM COMPONENT: BACKGROUND BINARY PARSER ENGINE (fiveman1 BUILD)
+//   MRTLC SYSTEM COMPONENT: BACKGROUND BINARY PARSER ENGINE (fiveman1 PIPELINE)
 // ============================================================================
 
 /**
- * LZ4 BLOCK DECOMPRESSOR
- * Unpacks compressed chunk segments from the binary stream.
+ * NATIVE LZ4 BLOCK UNPACKER
+ * Decompresses raw Roblox chunk arrays via bitwise shifts.
  */
 function decompressLZ4(input, outputLength) {
     let output = new Uint8Array(outputLength);
@@ -50,8 +50,8 @@ function decompressLZ4(input, outputLength) {
 }
 
 /**
- * FIVEAMN1 DE-INTERLEAVE ALGORITHM
- * Reverses the byte-shuffling deck optimization applied to long strings.
+ * STRIDE MATRIX DE-INTERLEAVER (fiveman1 core math)
+ * Reverses the byte-shuffling deck layout used to optimize string storage compression.
  */
 function deInterleaveBuffer(payload, totalLength) {
     let restored = new Uint8Array(totalLength);
@@ -62,14 +62,15 @@ function deInterleaveBuffer(payload, totalLength) {
         let positionInBlock = Math.floor(i / 4);
         let sourceIndex = (blockIndex * stride) + positionInBlock;
         
-        restored[i] = payload[sourceIndex];
+        if (sourceIndex < payload.length) {
+            restored[i] = payload[sourceIndex];
+        }
     }
     return restored;
 }
 
 /**
- * BACKGROUND WORKER MESSAGE LISTENER
- * Listens for the file buffer sent from the main website interface.
+ * MULTI-THREADED MESSAGE INTERCEPT
  */
 self.onmessage = async function(e) {
     const { arrayBuffer } = e.data;
@@ -77,13 +78,23 @@ self.onmessage = async function(e) {
     const bytes = new Uint8Array(arrayBuffer);
     
     try {
-        // Validate magic signature "ROBLOX"
-        const sig = String.fromCharCode(...bytes.subarray(0, 6));
-        if (sig !== "ROBLOX") {
-            throw new Error("INVALID_HEADER: Not a valid Roblox binary file.");
+        let offset = 0;
+        
+        // Dynamic search for 'ROBLOX' header markers within the entry byte stream
+        let headerFound = false;
+        for (let i = 0; i < 20; i++) {
+            if (String.fromCharCode(...bytes.subarray(i, i + 6)) === "ROBLOX") {
+                offset = i + 14; // Advance pointer past signature parameters
+                headerFound = true;
+                break;
+            }
+        }
+
+        // Alternative safety configuration: If header signature fails text decoding, force read past index 14
+        if (!headerFound) {
+            offset = 14;
         }
         
-        let offset = 14; 
         let extractedScripts = [];
         let discoveredNames = [];
         let instanceCount = 0;
@@ -98,7 +109,7 @@ self.onmessage = async function(e) {
             
             const compLen = view.getUint32(offset, true); offset += 4;
             const decompLen = view.getUint32(offset, true); offset += 4;
-            offset += 4; // Skip flags
+            offset += 4; // Skip block flags
             
             let payload = bytes.subarray(offset, offset + compLen);
             offset += compLen;
@@ -117,38 +128,51 @@ self.onmessage = async function(e) {
             } 
             
             else if (chunkType === "PROP") {
-                const propName = String.fromCharCode(...payload.subarray(4, 10));
+                // Find property value metadata text strings 
+                const propString = String.fromCharCode(...payload.subarray(0, 30));
                 
-                if (propName === "Source") {
+                if (propString.includes("Source")) {
+                    // Split past the object references and property name headers
                     let interleaveStream = payload.subarray(12);
+                    
+                    // Unshuffle strings using the stride formula!
                     let fixedBytes = deInterleaveBuffer(interleaveStream, interleaveStream.length);
                     let cleanSourceText = new TextDecoder().decode(fixedBytes);
                     
+                    // Clean null characters and strip string noise formatting tags
                     cleanSourceText = cleanSourceText.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F]/g, "").trim();
-                    if (cleanSourceText.length > 0) {
+                    if (cleanScriptString(cleanSourceText)) {
                         extractedScripts.push(cleanSourceText);
                     }
                 } 
-                else if (propName === "Name\x00" || propName === "Name") {
+                else if (propString.includes("Name")) {
                     const nameText = String.fromCharCode(...payload.subarray(12)).replace(/[\x00-\x1F]/g, "").trim();
-                    if (nameText.length > 1 && nameText.length < 32 && !nameText.includes("Property")) {
+                    if (nameText.length > 1 && nameText.length < 32 && !nameText.includes("Property") && !nameText.includes("Source")) {
                         discoveredNames.push(nameText);
                     }
                 }
             }
         }
 
-        // Send results back to main thread
         self.postMessage({
             success: true,
             extractedScripts,
             discoveredNames,
             scriptCount: extractedScripts.length || scriptCount,
             partCount,
-            instanceCount
+            instanceCount: instanceCount || 1
         });
 
     } catch (err) {
         self.postMessage({ success: false, error: err.message });
     }
 };
+
+/**
+ * FILTER LUA SYNTAX VALIDATION
+ */
+function cleanScriptString(str) {
+    if (str.length < 3) return false;
+    // Ensure text captures structural syntax identifiers
+    return str.includes("local") || str.includes("function") || str.includes("=") || str.includes(":") || str.includes("wait") || str.includes("require");
+}
