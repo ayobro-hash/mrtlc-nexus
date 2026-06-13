@@ -1,22 +1,22 @@
-// worker.js - The background brain for your Helio G81
-import { parseBuffer } from 'rbx-reader';
+// nexus-worker.js - The Background Compilation Core
+import { decode } from 'https://cdn.jsdelivr.net/gh/MrSprinkleToes/rbxBinaryParser@master/rbxBinaryParser.js';
 
 self.onmessage = async (event) => {
-    // 1. Grab the raw file bytes sent from the main thread
     const arrayBuffer = event.data;
 
     try {
-        // 2. Convert raw browser array buffer to a Node-compatible buffer for rbx-reader
-        const buffer = Buffer.from(arrayBuffer);
+        if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+            throw new Error("Target data stream block is empty.");
+        }
 
-        // 3. Decompress and parse the .rbxm layout
-        const parsedData = parseBuffer(buffer);
+        // Decompress and deserialize the raw .rbxm file byte stream
+        const parsedData = decode(arrayBuffer);
 
-        // 4. Send the structured data object back to your main UI thread
+        // Dispatch clean JSON structure array back to index.html
         self.postMessage({ success: true, data: parsedData });
 
     } catch (error) {
-        // Prevent a complete application freeze if the file data is corrupted
+        // Fallback error messenger ensures your UI button never hangs forever
         self.postMessage({ success: false, error: error.message });
     }
 };
