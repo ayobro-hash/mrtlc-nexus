@@ -3,195 +3,350 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MRTLC v3.5 - Aero Glass Edition</title>
+    <title>MRTLC Nexus Parser</title>
     <style>
-        /* AERO LIQUID GLASS VARIABLE ENGINE */
-        :root { 
-            --bg: #040406;
-            --glass-base: rgba(10, 12, 22, 0.45);
-            --glass-border: rgba(255, 255, 255, 0.12);
-            --accent: #00f0ff; 
-            --accent-glow: rgba(0, 240, 255, 0.4);
-            --neon-green: #39ff14; 
-            --neon-purple: #bd00ff; 
-            --text: #ffffff; 
-            --text-muted: #7e8092; 
+        :root {
+            --bg-dark: #0f1015;
+            --panel-bg: #14151c;
+            --accent-cyan: #00ffd0;
+            --accent-purple: #8a2be2;
+            --text-main: #ffffff;
+            --text-dim: #969ba2;
+            --border-color: #2d303e;
         }
 
-        body { 
-            background-color: var(--bg); 
-            color: var(--text); 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            padding: 15px; 
-            margin: 0; 
-            box-sizing: border-box; 
-            min-height: 100vh;
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
             display: flex;
-            align-items: center;
             justify-content: center;
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            background-attachment: fixed;
-            background-image: 
-                radial-gradient(circle at 20% 20%, rgba(0, 240, 255, 0.12), transparent 40%),
-                radial-gradient(circle at 80% 80%, rgba(189, 0, 255, 0.12), transparent 40%);
-            transition: background 0.4s;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
         }
 
-        /* CENTRALIZED COMPACT POD CONTAINER */
-        .app-container { 
+        .nexus-wrapper {
             width: 100%;
-            max-width: 600px; 
-            background: var(--glass-base); 
-            border: 1px solid var(--glass-border); 
-            padding: 24px; 
-            border-radius: 24px; 
-            backdrop-filter: blur(30px) saturate(160%);
-            -webkit-backdrop-filter: blur(30px) saturate(160%);
-            box-shadow: 
-                0 20px 50px rgba(0, 0, 0, 0.4),
-                inset 0 1px 2px rgba(255, 255, 255, 0.2);
+            max-width: 950px;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .header-section {
+            text-align: center;
+        }
+
+        .header-section h1 {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            background: linear-gradient(45deg, var(--text-main), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+        }
+
+        .header-section p {
+            color: var(--text-dim);
+            font-size: 14px;
+        }
+
+        /* Drag & Drop Upload Zone */
+        .upload-container {
+            border: 2px dashed #1a75ff;
+            background: rgba(26, 117, 255, 0.03);
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
             position: relative;
+        }
+
+        .upload-container:hover {
+            border-color: var(--accent-cyan);
+            background: rgba(0, 255, 208, 0.02);
+        }
+
+        .upload-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .upload-container input[type="file"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        /* Progress Bar Matrix */
+        .progress-track {
+            width: 100%;
+            height: 6px;
+            background: #1e2030;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-bar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #1a75ff, var(--accent-purple));
+            transition: width 0.4s ease;
+        }
+
+        /* Action Controls Layout */
+        .control-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 10px 0;
+        }
+
+        .compile-btn {
+            background: var(--border-color);
+            color: var(--text-main);
+            border: 1px solid transparent;
+            padding: 12px 35px;
+            font-weight: 600;
+            font-size: 13px;
+            border-radius: 6px;
+            cursor: not-allowed;
+            opacity: 0.5;
+            letter-spacing: 0.5px;
+            transition: all 0.2s ease;
+        }
+
+        .compile-btn.active {
+            background: #1e2030;
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+            cursor: pointer;
+            opacity: 1;
+            box-shadow: 0 0 15px rgba(0, 255, 208, 0.2);
+        }
+
+        .compile-btn.active:hover {
+            background: var(--accent-cyan);
+            color: var(--bg-dark);
+            box-shadow: 0 0 20px rgba(0, 255, 208, 0.4);
+        }
+
+        /* Workspace Grid Splitter */
+        .workspace-grid {
+            display: grid;
+            grid-template-columns: 1fr 120px 1fr;
+            gap: 20px;
+            min-height: 300px;
+        }
+
+        @media (max-width: 768px) {
+            .workspace-grid {
+                grid-template-columns: 1fr;
+            }
+            .center-status-block {
+                order: -1;
+                padding: 20px 0;
+            }
+        }
+
+        .panel-box {
+            background: #0d0e12;
+            border: 1px solid #1c1d26;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
             overflow: hidden;
         }
 
-        /* LIGHT REFRACTIVE SHEEN OVERLAY */
-        .app-container::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0; height: 50%;
-            background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 60%);
-            pointer-events: none;
-            border-radius: 24px 24px 0 0;
+        .panel-header {
+            background: #14151c;
+            padding: 10px 15px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-dim);
+            border-bottom: 1px solid #1c1d26;
+            letter-spacing: 0.5px;
         }
-        
-        .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--glass-border); padding-bottom: 16px; margin-bottom: 20px; }
-        h1 { font-size: 1.4rem; margin: 0; font-weight: 800; letter-spacing: 0.5px; color: #fff; text-shadow: 0 0 12px var(--accent-glow); }
-        .badge { background: rgba(255, 255, 255, 0.07); border: 1px solid var(--glass-border); color: #fff; font-size: 10px; padding: 4px 10px; border-radius: 20px; font-family: monospace; }
-        
-        .status-panel { background: rgba(0, 0, 0, 0.25); border-left: 3px solid var(--accent); padding: 12px; border-radius: 6px; font-size: 11px; margin-bottom: 20px; color: var(--accent); font-family: monospace; display: flex; justify-content: space-between; }
-        
-        .nav-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 20px; }
-        .tab-btn { background: rgba(0, 0, 0, 0.2); border: 1px solid var(--glass-border); color: var(--text-muted); padding: 12px; border-radius: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; }
-        .tab-btn:hover { background: rgba(255,255,255,0.03); color: #fff; }
-        .tab-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(255, 255, 255, 0.03); box-shadow: 0 0 15px var(--accent-glow); }
 
-        .grid-tags { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 20px; }
-        .tag { background: rgba(0,0,0,0.15); border: 1px solid var(--glass-border); text-align: center; padding: 6px 0; border-radius: 6px; font-size: 11px; font-weight: bold; color: var(--text-muted); font-family: monospace; }
-        .tag.active-xml { border-color: var(--neon-green); color: var(--neon-green); }
-        .tag.active-bin { border-color: var(--neon-purple); color: var(--neon-purple); }
+        /* Explorer Tree Element Container */
+        .tree-viewport {
+            padding: 15px;
+            overflow-y: auto;
+            flex-grow: 1;
+            font-family: 'Courier New', Courier, monospace;
+            max-height: 320px;
+        }
 
-        .drop-zone { border: 2px dashed var(--glass-border); padding: 40px 20px; text-align: center; border-radius: 16px; background: rgba(0,0,0,0.1); transition: 0.2s; cursor: pointer; }
-        .drop-zone:hover { border-color: var(--accent); background: rgba(255,255,255,0.01); }
-        .drop-icon { font-size: 32px; filter: drop-shadow(0 0 8px var(--accent-glow)); margin-bottom: 10px; display: block; }
-        .file-loaded { display: none; background: rgba(255,255,255,0.05); border: 1px solid var(--accent); color: var(--accent); padding: 10px; border-radius: 8px; margin-top: 15px; font-size: 12px; font-family: monospace; }
+        /* Live Code Display Container */
+        .code-viewport {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: transparent;
+            color: #d4d4d4;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            padding: 15px;
+            resize: none;
+            outline: none;
+            line-height: 1.5;
+            flex-grow: 1;
+            max-height: 320px;
+        }
 
-        button.main-btn { background: #fff; color: #000; border: none; width: 100%; padding: 14px; border-radius: 10px; font-weight: bold; font-size: 0.95rem; cursor: pointer; margin-top: 20px; transition: 0.2s; box-shadow: 0 4px 15px rgba(255,255,255,0.1); }
-        button.main-btn:hover:not(:disabled) { background: var(--accent); box-shadow: 0 0 20px var(--accent-glow); }
-        button.main-btn:disabled { background: rgba(255,255,255,0.03) !important; color: #4a4a5a !important; cursor: not-allowed; border: 1px solid var(--glass-border); box-shadow: none; }
+        /* Center Ring Layout Section */
+        .center-status-block {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            gap: 10px;
+        }
 
-        .preview-label { font-size: 11px; color: var(--text-muted); margin-top: 25px; margin-bottom: 5px; display: block; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
-        .terminal-box { background: rgba(0, 0, 0, 0.3); border: 1px solid var(--glass-border); padding: 12px; border-radius: 8px; max-height: 120px; overflow-y: auto; font-size: 11px; color: #a0a0b5; font-family: monospace; }
-        .tree-node { margin-left: 15px; border-left: 1px dotted rgba(255,255,255,0.1); padding-left: 10px; margin-top: 4px; }
-        
-        textarea { width: 100%; height: 100px; background: rgba(0, 0, 0, 0.3); color: var(--accent); border: 1px solid var(--glass-border); padding: 10px; border-radius: 8px; font-family: monospace; font-size: 11px; margin-top: 10px; resize: none; box-sizing: border-box; outline: none; }
-        
-        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px; }
-        .btn-sec { background: transparent; border: 1px solid var(--glass-border); color: var(--text); padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.85rem; transition: 0.2s; }
-        .btn-sec:hover { background: rgba(255,255,255,0.05); }
-        .btn-success { background: rgba(255,255,255,0.05); border: 1px solid var(--accent); color: var(--accent); border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.85rem; transition: 0.2s; }
-        .btn-success:hover:not(:disabled) { background: var(--accent); color: #000; box-shadow: 0 0 15px var(--accent-glow); }
-        .btn-success:disabled { opacity: 0.3; cursor: not-allowed; }
+        .radial-progress {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: conic-gradient(var(--accent-purple) 0deg, #1c1d26 0deg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
 
-        #visualizer-canvas { width: 100%; height: 240px; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--glass-border); border-radius: 14px; margin-top: 15px; display: block; }
-        .theme-panel { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 5px; }
-        .theme-chip { background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 12px; text-align: center; border-radius: 8px; font-size: 11px; font-weight: bold; cursor: pointer; font-family: monospace; }
-        .theme-chip:hover { background: rgba(255,255,255,0.03); }
+        .radial-progress::before {
+            content: "";
+            position: absolute;
+            width: 56px;
+            height: 56px;
+            background: var(--panel-bg);
+            border-radius: 50%;
+        }
+
+        .radial-percentage {
+            position: relative;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .status-tag {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
     </style>
 </head>
 <body>
 
-    <div class="app-container">
-        
-        <div class="header">
-            <h1>MRTLC NEXUS</h1>
-            <span class="badge">AERO GLASS v3.5</span>
+    <div class="nexus-wrapper">
+        <div class="header-section">
+            <h1>Nexus Parser</h1>
+            <p>Convert RBXM to RBXMX Asset Layout Arrays</p>
         </div>
 
-        <div class="status-panel">
-            <span>⚡ CONSOLE STORAGE PIPELINE:</span>
-            <span id="engine-status" style="font-weight: bold;">STANDBY</span>
-        </div>
-
-        <div class="nav-tabs">
-            <button id="tab-parser-btn" class="tab-btn active" onclick="switchNexusTab('parser')">📂 PARSER</button>
-            <button id="tab-visualizer-btn" class="tab-btn" onclick="switchNexusTab('visualizer')">🎵 MATRIX</button>
-            <button id="tab-settings-btn" class="tab-btn" onclick="switchNexusTab('settings')">⚙️ CONF</button>
-        </div>
-
-        <div id="nexus-parser-view">
-            <div class="grid-tags">
-                <div class="tag active-xml">.RBXLX</div>
-                <div class="tag active-xml">.RBXMX</div>
-                <div class="tag active-bin">.RBXL</div>
-                <div class="tag active-bin">.RBXM</div>
-            </div>
-
-            <div class="drop-zone" onclick="document.getElementById('file-input').click()">
-                <span class="drop-icon">💿</span>
-                <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">MOUNT WORKSPACE FILE MATRIX CHUNKS</span>
-                <input type="file" id="file-input" accept=".rbxlx,.rbxmx,.rbxl,.rbxm" style="display:none" onchange="processFileSelection(this)">
-                <div id="file-status-box" class="file-loaded"></div>
-            </div>
-
-            <button id="main-compile-btn" class="main-btn" onclick="executeNexusCompilation()" disabled>COMPILE SOURCE CHUNKS</button>
-
-            <span class="preview-label">📂 STRUCTURE DECOMPOSITION STRUCT</span>
-            <div id="tree-view" class="terminal-box"><i>Awaiting sequence data array mount...</i></div>
-
-            <span class="preview-label">📜 PARSED SCRIPT CONSOLE PREVIEW</span>
-            <textarea id="code-preview-box" readonly placeholder="System console output trace streams..."></textarea>
-
-            <div class="action-grid">
-                <button class="btn-sec" onclick="copyConsoleBuffer()">📋 COPY DATA</button>
-                <button id="download-btn" class="btn-success" onclick="triggerScriptDownload()" disabled>💾 EXPORT LUA</button>
+        <div class="upload-container" id="drop-zone">
+            <span class="upload-icon">📄</span>
+            <p style="font-weight: 600; margin-bottom: 4px;">Load your file here</p>
+            <p style="color: var(--text-dim); font-size: 12px;">Supports binary .rbxm asset payloads</p>
+            <input type="file" id="file-input" accept=".rbxm,.rbxmx">
+            <div class="progress-track">
+                <div class="progress-bar" id="load-progress"></div>
             </div>
         </div>
 
-        <div id="nexus-visualizer-view" style="display: none;">
-            <div class="drop-zone" onclick="document.getElementById('audio-input').click()">
-                <span class="drop-icon">🎵</span>
-                <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">INJECT WAVEFORM ARCHIVE ARRAYS</span>
-                <input type="file" id="audio-input" accept="audio/*" style="display:none" onchange="processAudioSelection(this)">
-                <div id="audio-status-box" class="file-loaded"></div>
-            </div>
-
-            <canvas id="visualizer-canvas"></canvas>
+        <div class="control-row">
+            <button class="compile-btn" id="main-compile-btn" disabled onclick="executeNexusCompilation()">COMPILE SOURCE CHUNKS</button>
         </div>
 
-        <div id="nexus-settings-view" style="display: none;">
-            <span class="preview-label">🎨 GLASS ENGINE THEME DESIGNATION</span>
-            <div class="theme-panel">
-                <div class="theme-chip" style="color: #00f0ff; border-color: rgba(0,240,255,0.2);" onclick="applyGlassTheme('cyber')">AERO CYAN</div>
-                <div class="theme-chip" style="color: #39ff14; border-color: rgba(57,255,20,0.2);" onclick="applyGlassTheme('matrix')">BIO MATRIX</div>
-                <div class="theme-chip" style="color: #ffaa00; border-color: rgba(255,170,0,0.2);" onclick="applyGlassTheme('solar')">AMBER SUN</div>
+        <div class="workspace-grid">
+            <div class="panel-box">
+                <div class="panel-header">STRUCTURAL TREE HIERARCHY</div>
+                <div class="tree-viewport" id="tree-view">
+                    <span style="color: var(--text-dim); font-style: italic;">No structural elements loaded.</span>
+                </div>
             </div>
 
-            <span class="preview-label">🖼️ CORE SYSTEM WALLPAPER COMPONENT</span>
-            <div style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 15px; border-radius: 12px; margin-top: 10px;">
-                <button class="btn-success" style="width: 100%; margin-bottom: 10px; padding: 10px;" onclick="document.getElementById('wallpaper-input').click()">📁 MOUNT CUSTOM BACKGROUND</button>
-                <input type="file" id="wallpaper-input" accept="image/*" style="display:none" onchange="processWallpaperUpload(this)">
-                <button class="btn-sec" style="width: 100%; border-color: rgba(255,255,255,0.1); font-size: 11px; padding: 8px;" onclick="clearSavedWallpaper()">🗑️ REMOVE BACKGROUND</button>
+            <div class="center-status-block">
+                <div class="radial-progress" id="radial-track">
+                    <span class="radial-percentage" id="radial-text">0%</span>
+                </div>
+                <span class="status-tag" id="status-string">Idle Mode</span>
             </div>
 
-            <span class="preview-label">🛰️ MEMORY SUBSYSTEM ARCHIVE CONTROL</span>
-            <button class="btn-sec" style="width: 100%; border-color: #ff3333; color: #ff3333; margin-top: 10px; font-weight: bold;" onclick="location.reload()">☢️ FLUSH SYSTEM MEMORY REBOOT</button>
+            <div class="panel-box">
+                <div class="panel-header">SOURCE CODE STREAM PREVIEW</div>
+                <textarea class="code-viewport" id="code-preview-box" readonly placeholder="-- Click a structural script instance component to reveal code matrix streams..."></textarea>
+            </div>
         </div>
-
     </div>
 
-    <script src="nexus-ui.js"></script>
     <script src="nexus-parser.js"></script>
+    <script>
+        // Tie visual indicators directly to file states
+        const fileIn = document.getElementById('file-input');
+        const compBtn = document.getElementById('main-compile-btn');
+        const progBar = document.getElementById('load-progress');
+        const radialTrack = document.getElementById('radial-track');
+        const radialTxt = document.getElementById('radial-text');
+        const statusStr = document.getElementById('status-string');
+
+        fileIn.addEventListener('change', () => {
+            if(fileIn.files.length > 0) {
+                compBtn.classList.add('active');
+                compBtn.removeAttribute('disabled');
+                progBar.style.width = "40%";
+                statusStr.innerText = "Staged";
+                statusStr.style.color = "#1a75ff";
+            }
+        });
+
+        // Intercept compilation hooks to animate properties
+        const originalCompile = window.executeNexusCompilation;
+        window.executeNexusCompilation = async function() {
+            progBar.style.width = "100%";
+            statusStr.innerText = "Parsing...";
+            statusStr.style.color = "#8a2be2";
+            
+            // Loop code to mimic progress completion ring
+            let p = 0;
+            let interval = setInterval(() => {
+                p += 10;
+                radialTxt.innerText = p + "%";
+                radialTrack.style.background = `conic-gradient(var(--accent-purple) ${p * 3.6}deg, #1c1d26 0deg)`;
+                if(p >= 100) {
+                    clearInterval(interval);
+                    statusStr.innerText = "Finished";
+                    statusStr.style.color = "var(--accent-cyan)";
+                }
+            }, 50);
+
+            if(originalCompile) await originalCompile();
+        }
+    </script>
 </body>
 </html>
