@@ -1,16 +1,13 @@
-// nexus-parser.js - Modern UI Engine for MRTLC Nexus
+// nexus-parser.js - Secure UI Engine with Visual Diagnostics
 
-// 1. Map core layout elements securely by their explicit IDs
 const compileBtn = document.getElementById('main-compile-btn');
 const fileInput = document.getElementById('file-input');
 const treeView = document.getElementById('tree-view');
 const codePreviewBox = document.getElementById('code-preview-box');
 
-// 2. Initialize background thread environment matrix
 let nexusWorker = new Worker('nexus-worker.js', { type: 'module' });
 let compilationTimeout = null;
 
-// 3. Keep compile buttons securely locked until a valid target payload is staged
 if (fileInput) {
     fileInput.addEventListener('change', () => {
         if (fileInput.files.length > 0) {
@@ -24,7 +21,6 @@ if (fileInput) {
     });
 }
 
-// 4. Main Event Execution Trigger called directly from index.html (onclick)
 window.executeNexusCompilation = async function() {
     const file = fileInput.files[0];
     if (!file) {
@@ -32,37 +28,28 @@ window.executeNexusCompilation = async function() {
         return;
     }
 
-    // Shift interface layout states to processing mode
     compileBtn.innerText = "PROCESSING CHUNKS...";
     compileBtn.setAttribute('disabled', 'true');
     
     if (treeView) treeView.innerHTML = `<span style="color: #00ff00;">[STATUS] Extracting payload buffer stream...</span>`;
     if (codePreviewBox) codePreviewBox.value = "";
 
-    // Clear any dangling timeout checks from previous runs
     clearTimeout(compilationTimeout);
 
-    // 10-Second Watchdog Timer: Protects UI thread availability against corrupt/malformed blocks
     compilationTimeout = setTimeout(() => {
-        console.warn("[MRTLC WATCHDOG] Compilation limit reached. Aborting stuck process thread.");
-        
+        console.warn("[MRTLC WATCHDOG] Task forcefully terminated.");
         nexusWorker.terminate();
-        
-        // Instantly spawn a fresh worker matrix so the interface remains completely usable
         nexusWorker = new Worker('nexus-worker.js', { type: 'module' });
         setupWorkerListener(); 
         
         if (treeView) {
-            treeView.innerHTML = `<span style="color: #ffaa00;">[TIMEOUT TERMINATION] Compilation execution took too long. The file data format layout may be corrupt or unstable.</span>`;
+            treeView.innerHTML = `<span style="color: #ffaa00;">[TIMEOUT] Halted to prevent local terminal crash.</span>`;
         }
         resetButton();
     }, 10000);
 
     try {
-        // Read raw file stream bits natively
         const arrayBuffer = await file.arrayBuffer();
-
-        // Ship the memory block array directly down the background worker pipe
         nexusWorker.postMessage(arrayBuffer, [arrayBuffer]);
     } catch (err) {
         console.error("Payload read failure:", err);
@@ -71,92 +58,125 @@ window.executeNexusCompilation = async function() {
     }
 };
 
-// 5. Encapsulate Worker Message Listeners for hot-swapping resets
 function setupWorkerListener() {
     nexusWorker.onmessage = (event) => {
-        // Break the watchdog lock instantly since the thread responded safely
         clearTimeout(compilationTimeout);
         resetButton();
 
-        const { success, data, error } = event.data;
+        const { success, isXml, xmlData, data, error } = event.data;
 
-        if (success) {
-            console.log("[MRTLC MAIN] Modern structural array validated successfully:", data);
+        if (!success) {
+            if (treeView) treeView.innerHTML = `<span style="color: #ff3333;">[FAULT] ${error}</span>`;
+            return;
+        }
+
+        if (treeView) treeView.innerHTML = ''; 
+
+        if (isXml) {
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(xmlData, "text/xml");
+            const rootItems = xmlDoc.querySelectorAll("roblox > Item");
             
-            if (treeView) {
-                treeView.innerHTML = ''; // Wipe loading notifications
-                
-                // Recursively render out the incoming JSON explorer map
-                if (Array.isArray(data)) {
-                    renderNexusTree(data, treeView);
-                } else {
-                    renderNexusTree([data], treeView);
+            if (rootItems.length === 0) {
+                treeView.innerHTML = `<span style="color: #ffaa00;">[WARN] XML Workspace data structure appears empty.</span>`;
+                return;
+            }
+
+            const parsedTree = parseXmlNodes(rootItems);
+            renderNexusTree(parsedTree, treeView);
+        } 
+        else if (data) {
+            // Check if the worker only returned system warnings or empty arrays
+            const hasValidScripts = data[0] && data[0].Children && data[0].Children.length > 0 && data[0].Children[0].Name !== "System_Notification";
+            
+            if (!hasValidScripts) {
+                if (treeView) {
+                    treeView.innerHTML = `
+                        <div style="padding: 10px; border: 1px solid #ffaa00; background: #221100; color: #ffaa00; border-radius: 4px; font-size: 13px;">
+                            <strong style="color: #ffffff;">[MRTLC NEXUS SYSTEM DIAGNOSTIC]</strong><br><br>
+                            The uploaded <strong>.rbxm</strong> binary blocks are packed using modern Roblox LZ4 chunk compression. 
+                            The source string characters cannot be extracted in pure browser memory streams while compressed.<br><br>
+                            <span style="color: #00ffd0;">✔ QUICK FIX:</span> In Roblox Studio, right-click your Model/Script and select <strong>Save to File</strong>, then switch the file type dropdown from Binary (.rbxm) to <strong style="color: #ffffff;">Roblox XML Model Files (*.rbxmx)</strong>.<br><br>
+                            Drop that generated XML file back into MRTLC Nexus and it will decompress your code layout instantly!
+                        </div>
+                    `;
                 }
+                if (codePreviewBox) {
+                    codePreviewBox.value = `-- MRTLC Nexus Diagnostic Trace\n-- Status: Payload buffer read cleanly but data stream is encrypted/compressed.\n-- Recommendation: Swap to .rbxmx format in Studio for mobile execution compatibility.`;
+                }
+                return;
             }
-        } else {
-            console.error("[MRTLC MAIN] Internal Worker Exception:", error);
-            if (treeView) {
-                treeView.innerHTML = `<span style="color: #ff3333;">[CRITICAL PARSER FAULT] ${error}</span>`;
-            }
+            renderNexusTree(data, treeView);
         }
     };
 
     nexusWorker.onerror = (err) => {
         clearTimeout(compilationTimeout);
-        console.error("Worker Core Thread Error:", err);
         resetButton();
     };
 }
 
-// Initial binding pass for runtime execution
 setupWorkerListener();
 
-// 6. Interactive Recursive DOM Explorer Node Builder
+function parseXmlNodes(xmlNodeList) {
+    const instances = [];
+    xmlNodeList.forEach(node => {
+        if (node.nodeType !== 1) return;
+        const className = node.getAttribute("class") || "Instance";
+        const nameNode = node.querySelector(":scope > Properties > string[name='Name']");
+        const name = nameNode ? nameNode.textContent : className;
+        const sourceNode = node.querySelector(":scope > Properties > protectedstring[name='Source']");
+        const sourceCode = sourceNode ? sourceNode.textContent : null;
+
+        const currentInstance = {
+            ClassName: className,
+            Name: name,
+            Source: sourceCode,
+            Children: []
+        };
+
+        const childNodes = node.querySelectorAll(":scope > Item");
+        if (childNodes.length > 0) {
+            currentInstance.Children = parseXmlNodes(childNodes);
+        }
+        instances.push(currentInstance);
+    });
+    return instances;
+}
+
 function renderNexusTree(instances, container) {
     instances.forEach(ins => {
         if (!ins) return;
-
-        // Construct interactive container div row
         const itemElement = document.createElement('div');
         itemElement.style.paddingLeft = "14px";
         itemElement.style.margin = "4px 0";
         itemElement.style.cursor = "pointer";
         itemElement.style.fontSize = "13px";
-        itemElement.style.userSelect = "none";
 
         const className = ins.ClassName || 'Instance';
-        
-        // UI Visual Distinction: Color-code script modules vs structural objects
         const isScript = className.includes('Script') || className === 'ModuleScript';
         const nameColor = isScript ? '#4fc1ff' : '#00ffd0';
 
         itemElement.innerHTML = `<span style="color: ${nameColor}; font-weight: bold;">[${className}]</span> <span style="color: #ffffff;">${ins.Name || 'Instance'}</span>`;
 
-        // Click Event: Extract raw source trace strings out of the clean instance tree properties
         itemElement.addEventListener('click', (e) => {
-            e.stopPropagation(); // Block bubbling to prevent parent tree nodes from running double traces
-            
+            e.stopPropagation();
             if (!codePreviewBox) return;
-
-            // Our modern worker processes this to a flat 'Source' key if found
             const sourceCode = ins.Source;
-
             if (sourceCode !== null && sourceCode !== undefined) {
-                codePreviewBox.value = `-- EXECUTING SOURCE TRACE MAP: ${ins.Name || 'Script'}\n-- Class Type: ${className}\n------------------------------------------------\n\n${sourceCode}`;
+                codePreviewBox.value = `-- EXECUTING SOURCE TRACE MAP: ${ins.Name || 'Script'}\n------------------------------------------------\n\n${sourceCode}`;
             } else {
-                codePreviewBox.value = `-- INSTANCE TRACE: ${ins.Name || 'Instance'}\n-- Class Type: ${className}\n-- Notification: No embedded Lua strings or script data found inside this instance layout block.`;
+                codePreviewBox.value = `-- INSTANCE TRACE: ${ins.Name || 'Instance'}\n-- No embedded source found in this layout container block.`;
             }
         });
 
         container.appendChild(itemElement);
 
-        // Recursively cycle into deep descendant tree levels
         if (ins.Children && ins.Children.length > 0) {
             const nestedContainer = document.createElement('div');
             nestedContainer.style.borderLeft = "1px dashed #444444";
             nestedContainer.style.marginLeft = "6px";
             nestedContainer.style.paddingLeft = "8px";
-            
             itemElement.appendChild(nestedContainer);
             renderNexusTree(ins.Children, nestedContainer);
         }
