@@ -1,4 +1,4 @@
-// nexus-worker.js - High-Performance Binary Signature Scanner
+// nexus-worker.js - Streaming Binary Byte Scanner for MRTLC Nexus
 
 self.onmessage = async (event) => {
     const arrayBuffer = event.data;
@@ -8,26 +8,18 @@ self.onmessage = async (event) => {
             throw new Error("Target file chunk buffer is entirely empty.");
         }
 
-        console.log(`[MRTLC NEXUS] Slicing binary byte matrix: ${arrayBuffer.byteLength} bytes.`);
-
-        const uint8Array = new Uint8Array(arrayBuffer);
+        const bytes = new Uint8Array(arrayBuffer);
         const decoder = new TextDecoder("utf-8");
 
         // 1. Instantly sniff for XML layout vs Raw Binary
-        const signature = decoder.decode(uint8Array.subarray(0, 8));
-        
-        if (signature.startsWith("<roblox")) {
+        if (bytes[0] === 0x3C && bytes[1] === 0x72) { // "<r" -> <roblox
             console.log("[MRTLC NEXUS] Plain-text XML footprint verified.");
             const xmlText = decoder.decode(arrayBuffer);
             self.postMessage({ success: true, isXml: true, xmlData: xmlText });
             return;
         }
 
-        // 2. BINARY EXTRACTION MATRIX: Scan memory buffers directly for Script Source structures
-        console.log("[MRTLC NEXUS] Scanning binary chunks via direct byte matching...");
-        
-        // Convert the entire file buffer into a raw text stream safely to extract script content
-        const rawContentString = decoder.decode(uint8Array);
+        console.log(`[MRTLC NEXUS] Streaming byte-stream: ${bytes.length} bytes.`);
         
         const instances = [{
             ClassName: "DataModel",
@@ -36,48 +28,63 @@ self.onmessage = async (event) => {
             Children: []
         }];
 
-        // Look for common patterns where Roblox stores raw Lua source text blocks inside PROP chunks
-        // This splits by typical Lua structural markers rather than rigid file versions
-        const luaScriptBlocks = [];
-        
-        // Let's sweep for any blocks starting with standard comments or keyword initializations
-        const scriptRegex = /(?:--\[\[[\s\S]*?\]\]|--[^\n]*|\blocal\b\s+[a-zA-Z_][a-zA-Z0-9_]*\s*=)/g;
-        let match;
+        // 2. BYTE SCANNER: Search directly for the "Source" property marker sequence
+        // Hex signatures: S(53) o(6F) u(75) r(72) c(63) e(65)
+        const targetSequence = [0x53, 0x6F, 0x75, 0x72, 0x63, 0x65]; 
         let scriptIndex = 1;
 
-        // Extract raw chunks that contain meaningful Lua script structures
-        while ((match = scriptRegex.exec(rawContentString)) !== null) {
-            // Grab a healthy chunk of the source text around the match
-            const startPos = match.index;
-            // Scan forward until we hit a binary boundary null terminator (\x00) or massive gap
-            let endPos = rawContentString.indexOf('\x00', startPos);
-            if (endPos === -1 || endPos - startPos > 50000) {
-                endPos = startPos + 2000; // Fallback bound chunk size
+        for (let i = 0; i < bytes.length - targetSequence.length; i++) {
+            let match = true;
+            for (let j = 0; j < targetSequence.length; j++) {
+                if (bytes[i + j] !== targetSequence[j]) {
+                    match = false;
+                    break;
+                }
             }
 
-            const extractedChunk = rawContentString.substring(startPos, endPos).trim();
-            
-            // Only capture valid text payloads that don't look like fragmented junk data
-            if (extractedChunk.length > 20 && !luaScriptBlocks.includes(extractedChunk)) {
-                luaScriptBlocks.push(extractedChunk);
-                
-                instances[0].Children.push({
-                    ClassName: "LuaScriptChunk",
-                    Name: `Extracted_Script_Stream_${scriptIndex++}`,
-                    Source: extractedChunk,
-                    Children: []
-                });
-            }
+            if (match) {
+                // Moving past "Source" string block (6 bytes)
+                let dataPointer = i + 6;
 
-            // Safety check to prevent run-away regex parsing loops on huge files
-            if (luaScriptBlocks.length >= 100) break;
+                // Roblox binary properties generally use a type byte identifier next (0x1F for ProtectedString)
+                if (bytes[dataPointer] === 0x1F) {
+                    dataPointer++; // Skip type block identifier
+                }
+
+                // Read the next 4 bytes as a 32-bit Little-Endian integer to get the exact string length
+                if (dataPointer + 4 <= bytes.length) {
+                    const stringLength = bytes[dataPointer] | 
+                                         (bytes[dataPointer + 1] << 8) | 
+                                         (bytes[dataPointer + 2] << 16) | 
+                                         (bytes[dataPointer + 3] << 24);
+
+                    dataPointer += 4; // Step over length integer definition
+
+                    // Verify boundaries and extract code string block directly
+                    if (stringLength > 0 && stringLength < 500000 && (dataPointer + stringLength <= bytes.length)) {
+                        const rawScriptBytes = bytes.subarray(dataPointer, dataPointer + stringLength);
+                        const extractedLua = decoder.decode(rawScriptBytes).trim();
+
+                        // Clean up any stray non-printable data out of the text window
+                        if (extractedLua.length > 5 && /^[\x20-\x7E\s\r\n\t]+$/.test(extractedLua.substring(0, 10))) {
+                            instances[0].Children.push({
+                                ClassName: "Script",
+                                Name: `Extracted_Script_${scriptIndex++}`,
+                                Source: extractedLua,
+                                Children: []
+                            });
+                        }
+                    }
+                }
+            }
         }
 
+        // Fallback interface report if no explicit strings are pulled out
         if (instances[0].Children.length === 0) {
             instances[0].Children.push({
                 ClassName: "Script",
                 Name: "System_Notification",
-                Source: `-- [MRTLC NEXUS] Extraction Complete.\n-- No raw text script blocks were identified in the binary layout chunks.\n-- Total Checked Matrix Size: ${arrayBuffer.byteLength} bytes.`,
+                Source: `-- [MRTLC NEXUS] Extraction finished cleanly.\n-- No compiled Lua source streams found inside this 1MB file block.\n-- The binary script data may be completely empty or fully unscripted inside Studio.`,
                 Children: []
             });
         }
@@ -85,7 +92,7 @@ self.onmessage = async (event) => {
         self.postMessage({ success: true, isXml: false, data: instances });
 
     } catch (error) {
-        console.error("[MRTLC WORKER SYSTEM FAULT]", error);
+        console.error("[MRTLC WORKER ERROR]", error);
         self.postMessage({ success: false, error: error.message });
     }
 };
