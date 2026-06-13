@@ -1,40 +1,70 @@
-import { parseBuffer } from 'rbx-reader';
+// nexus-parser.js - Running on the Main UI Thread
 
-// 1. Grab your HTML file picker element
-const fileInput = document.getElementById('myFileInput'); 
+// 1. Target your elements exactly by their HTML attributes
+const compileBtn = document.getElementById('main-compile-btn');
+const fileInput = document.getElementById('nexusFileInput'); // Ensure your <input type="file" id="nexusFileInput"> matches this ID
+const outputDisplay = document.getElementById('output');
 
-fileInput.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+// 2. Initialize the Nexus Web Worker
+const nexusWorker = new Worker('nexus-worker.js', { type: 'module' });
+
+// 3. Keep button locked until a real file is dropped in
+if (fileInput) {
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files.length > 0) {
+            compileBtn.removeAttribute('disabled');
+            compileBtn.style.opacity = "1";
+            compileBtn.style.cursor = "pointer";
+        } else {
+            compileBtn.setAttribute('disabled', 'true');
+        }
+    });
+}
+
+// 4. Expose the execution function globally for the HTML onclick handler
+window.executeNexusCompilation = async function() {
+    const file = fileInput.files[0];
+    if (!file) {
+        alert("Please select an .rbxm file first!");
+        return;
+    }
+
+    // Set UI processing states
+    compileBtn.innerText = "PROCESSING CHUNKS...";
+    compileBtn.setAttribute('disabled', 'true');
 
     try {
-        // 2. Read the file as raw binary chunks instead of a text string
+        // Extract the raw file byte array
         const arrayBuffer = await file.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer); // Convert to Node-compatible buffer
 
-        // 3. Let rbx-reader handle the binary heavy lifting
-        const parsedData = parseBuffer(buffer);
-        
-        console.log("Successfully parsed structure:", parsedData);
-        
-        // 4. Send the clean data to your UI rendering function!
-        updateMyUI(parsedData);
-
+        // Transfer the buffer ownership directly to the worker thread (0ms overhead)
+        nexusWorker.postMessage(arrayBuffer, [arrayBuffer]);
     } catch (err) {
-        console.error("Binary parser failed:", err);
-        alert("Could not parse .rbxm file. Ensure it is not corrupted!");
+        console.error("Failed to read file buffer:", err);
+        resetButton();
     }
-});
+};
 
-// 5. Update your UI with the clean results
-function updateMyUI(instances) {
-    const display = document.getElementById('uiTreeContainer');
-    display.innerHTML = ''; // Clear out the loading state
+// 5. Catch the processed data coming back from the worker thread
+nexusWorker.onmessage = (event) => {
+    resetButton();
 
-    instances.forEach(ins => {
-        const row = document.createElement('div');
-        row.className = 'explorer-item';
-        row.innerText = `📦 ${ins.ClassName} - ${ins.Name}`;
-        display.appendChild(row);
-    });
+    const { success, data, error } = event.data;
+
+    if (success) {
+        console.log("Nexus compilation complete:", data);
+        
+        // Output the JSON structure cleanly inside your display block
+        if (outputDisplay) {
+            outputDisplay.innerHTML = `<pre style="color: #00ff00; text-align: left;">${JSON.stringify(data, null, 2)}</pre>`;
+        }
+    } else {
+        console.error("Compilation Thread Failure:", error);
+        if (outputDisplay) outputDisplay.innerText = "Error compiling: " + error;
+    }
+};
+
+function resetButton() {
+    compileBtn.innerText = "COMPILE SOURCE CHUNKS";
+    compileBtn.removeAttribute('disabled');
 }
