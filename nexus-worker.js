@@ -1,5 +1,4 @@
-// nexus-worker.js - Modern rbxm-parser-ts Engine Implementation
-import { RobloxFile } from 'https://esm.sh/rbxm-parser-ts';
+// nexus-worker.js - High-Performance Binary Signature Scanner
 
 self.onmessage = async (event) => {
     const arrayBuffer = event.data;
@@ -9,55 +8,84 @@ self.onmessage = async (event) => {
             throw new Error("Target file chunk buffer is entirely empty.");
         }
 
-        console.log("[MRTLC WORKER] Initializing modern rbxm-parser-ts execution layout...");
+        console.log(`[MRTLC NEXUS] Slicing binary byte matrix: ${arrayBuffer.byteLength} bytes.`);
 
-        // 1. Convert incoming ArrayBuffer directly into a Node-like Buffer proxy for the library
         const uint8Array = new Uint8Array(arrayBuffer);
+        const decoder = new TextDecoder("utf-8");
+
+        // 1. Instantly sniff for XML layout vs Raw Binary
+        const signature = decoder.decode(uint8Array.subarray(0, 8));
         
-        // 2. Read the Roblox file structure using the modern TS engine
-        const file = RobloxFile.ReadFromBuffer(uint8Array);
-        
-        if (!file) {
-            throw new Error("Invalid or corrupted Roblox binary format pattern.");
+        if (signature.startsWith("<roblox")) {
+            console.log("[MRTLC NEXUS] Plain-text XML footprint verified.");
+            const xmlText = decoder.decode(arrayBuffer);
+            self.postMessage({ success: true, isXml: true, xmlData: xmlText });
+            return;
         }
 
-        console.log("[MRTLC WORKER] Successfully read binary chunks. Structuring DOM metadata tree...");
-
-        // 3. Extract the root descendants and transform them into a clean JSON tree for the UI
-        const outputTree = processFileInstances(file.GetChildren());
-
-        console.log(`[MRTLC WORKER] Build finished successfully. Shipping data node map back to UI thread.`);
-        self.postMessage({ success: true, data: outputTree });
-
-    } catch (error) {
-        console.error("[MRTLC WORKER CORE FAULT]", error);
-        self.postMessage({ success: false, error: `Engine Execution Crash: ${error.message}` });
-    }
-};
-
-// Helper function to recursively clean the strongly-typed library objects into clean JSON
-function processFileInstances(instancesList) {
-    if (!instancesList || instancesList.length === 0) return [];
-
-    return instancesList.map(ins => {
-        // Safe property checks based on the modern TS typings layout
-        const propertiesMap = {};
+        // 2. BINARY EXTRACTION MATRIX: Scan memory buffers directly for Script Source structures
+        console.log("[MRTLC NEXUS] Scanning binary chunks via direct byte matching...");
         
-        // Extract available serialized metadata if attached
-        if (ins.properties) {
-            Object.keys(ins.properties).forEach(propName => {
-                propertiesMap[propName] = { value: ins.properties[propName] };
+        // Convert the entire file buffer into a raw text stream safely to extract script content
+        const rawContentString = decoder.decode(uint8Array);
+        
+        const instances = [{
+            ClassName: "DataModel",
+            Name: "MRTLC Nexus Workspace",
+            Source: null,
+            Children: []
+        }];
+
+        // Look for common patterns where Roblox stores raw Lua source text blocks inside PROP chunks
+        // This splits by typical Lua structural markers rather than rigid file versions
+        const luaScriptBlocks = [];
+        
+        // Let's sweep for any blocks starting with standard comments or keyword initializations
+        const scriptRegex = /(?:--\[\[[\s\S]*?\]\]|--[^\n]*|\blocal\b\s+[a-zA-Z_][a-zA-Z0-9_]*\s*=)/g;
+        let match;
+        let scriptIndex = 1;
+
+        // Extract raw chunks that contain meaningful Lua script structures
+        while ((match = scriptRegex.exec(rawContentString)) !== null) {
+            // Grab a healthy chunk of the source text around the match
+            const startPos = match.index;
+            // Scan forward until we hit a binary boundary null terminator (\x00) or massive gap
+            let endPos = rawContentString.indexOf('\x00', startPos);
+            if (endPos === -1 || endPos - startPos > 50000) {
+                endPos = startPos + 2000; // Fallback bound chunk size
+            }
+
+            const extractedChunk = rawContentString.substring(startPos, endPos).trim();
+            
+            // Only capture valid text payloads that don't look like fragmented junk data
+            if (extractedChunk.length > 20 && !luaScriptBlocks.includes(extractedChunk)) {
+                luaScriptBlocks.push(extractedChunk);
+                
+                instances[0].Children.push({
+                    ClassName: "LuaScriptChunk",
+                    Name: `Extracted_Script_Stream_${scriptIndex++}`,
+                    Source: extractedChunk,
+                    Children: []
+                });
+            }
+
+            // Safety check to prevent run-away regex parsing loops on huge files
+            if (luaScriptBlocks.length >= 100) break;
+        }
+
+        if (instances[0].Children.length === 0) {
+            instances[0].Children.push({
+                ClassName: "Script",
+                Name: "System_Notification",
+                Source: `-- [MRTLC NEXUS] Extraction Complete.\n-- No raw text script blocks were identified in the binary layout chunks.\n-- Total Checked Matrix Size: ${arrayBuffer.byteLength} bytes.`,
+                Children: []
             });
         }
 
-        // Catch the script source explicitly if it's exposed natively by the parser
-        const sourceValue = ins.Source || (ins.properties && ins.properties.Source) || null;
+        self.postMessage({ success: true, isXml: false, data: instances });
 
-        return {
-            ClassName: ins.ClassName || "Instance",
-            Name: ins.Name || "UnnamedInstance",
-            Source: typeof sourceValue === "string" ? sourceValue : (sourceValue?.value || null),
-            Children: processFileInstances(ins.GetChildren ? ins.GetChildren() : [])
-        };
-    });
-            }
+    } catch (error) {
+        console.error("[MRTLC WORKER SYSTEM FAULT]", error);
+        self.postMessage({ success: false, error: error.message });
+    }
+};
