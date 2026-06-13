@@ -1,14 +1,14 @@
 // nexus-parser.js - Running on the Main UI Thread
 
-// 1. Target your elements exactly by their HTML attributes
+// 1. Target your elements exactly by their verified HTML IDs
 const compileBtn = document.getElementById('main-compile-btn');
-const fileInput = document.getElementById('nexusFileInput'); // Ensure your <input type="file" id="nexusFileInput"> matches this ID
+const fileInput = document.getElementById('file-input'); // Fixed ID connection
 const outputDisplay = document.getElementById('output');
 
 // 2. Initialize the Nexus Web Worker
 const nexusWorker = new Worker('nexus-worker.js', { type: 'module' });
 
-// 3. Keep button locked until a real file is dropped in
+// 3. Monitor file input to immediately unlock the button
 if (fileInput) {
     fileInput.addEventListener('change', () => {
         if (fileInput.files.length > 0) {
@@ -21,15 +21,15 @@ if (fileInput) {
     });
 }
 
-// 4. Expose the execution function globally for the HTML onclick handler
+// 4. Expose the execution function globally for the HTML onclick="executeNexusCompilation()"
 window.executeNexusCompilation = async function() {
     const file = fileInput.files[0];
     if (!file) {
-        alert("Please select an .rbxm file first!");
+        alert("Please select a file first!");
         return;
     }
 
-    // Set UI processing states
+    // Lock button and switch text so you know it clicked
     compileBtn.innerText = "PROCESSING CHUNKS...";
     compileBtn.setAttribute('disabled', 'true');
 
@@ -37,15 +37,15 @@ window.executeNexusCompilation = async function() {
         // Extract the raw file byte array
         const arrayBuffer = await file.arrayBuffer();
 
-        // Transfer the buffer ownership directly to the worker thread (0ms overhead)
+        // Pass memory blocks instantly to the worker core
         nexusWorker.postMessage(arrayBuffer, [arrayBuffer]);
     } catch (err) {
-        console.error("Failed to read file buffer:", err);
+        console.error("Failed to read file stream:", err);
         resetButton();
     }
 };
 
-// 5. Catch the processed data coming back from the worker thread
+// 5. Catch the processed data coming back from the background worker
 nexusWorker.onmessage = (event) => {
     resetButton();
 
@@ -53,8 +53,6 @@ nexusWorker.onmessage = (event) => {
 
     if (success) {
         console.log("Nexus compilation complete:", data);
-        
-        // Output the JSON structure cleanly inside your display block
         if (outputDisplay) {
             outputDisplay.innerHTML = `<pre style="color: #00ff00; text-align: left;">${JSON.stringify(data, null, 2)}</pre>`;
         }
