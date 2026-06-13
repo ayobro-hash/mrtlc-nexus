@@ -74,6 +74,10 @@
             cursor: pointer;
             transition: all 0.3s ease;
             position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
 
         .upload-container:hover {
@@ -81,10 +85,29 @@
             background: rgba(0, 255, 208, 0.02);
         }
 
-        .upload-icon {
-            font-size: 40px;
-            margin-bottom: 10px;
-            display: block;
+        /* CSS Rendered Custom Vector File Icon (No External Assets Required) */
+        .file-vector-icon {
+            width: 40px;
+            height: 48px;
+            border: 2px solid var(--accent-cyan);
+            border-radius: 4px;
+            position: relative;
+            margin-bottom: 15px;
+            background: rgba(0, 255, 208, 0.05);
+            box-shadow: 0 0 10px rgba(0, 255, 208, 0.2);
+        }
+
+        .file-vector-icon::before {
+            content: "";
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            width: 12px;
+            height: 12px;
+            background: var(--panel-bg);
+            border-left: 2px solid var(--accent-cyan);
+            border-bottom: 2px solid var(--accent-cyan);
+            border-top-right-radius: 2px;
         }
 
         .upload-container input[type="file"] {
@@ -100,11 +123,12 @@
         /* Progress Bar Matrix */
         .progress-track {
             width: 100%;
+            max-width: 400px;
             height: 6px;
             background: #1e2030;
             border-radius: 10px;
             overflow: hidden;
-            margin-top: 10px;
+            margin-top: 15px;
         }
 
         .progress-bar {
@@ -270,7 +294,7 @@
         </div>
 
         <div class="upload-container" id="drop-zone">
-            <span class="upload-icon">📄</span>
+            <div class="file-vector-icon"></div>
             <p style="font-weight: 600; margin-bottom: 4px;">Load your file here</p>
             <p style="color: var(--text-dim); font-size: 12px;">Supports binary .rbxm asset payloads</p>
             <input type="file" id="file-input" accept=".rbxm,.rbxmx">
@@ -305,9 +329,8 @@
         </div>
     </div>
 
-    <script src="nexus-parser.js"></script>
+    <script src="nexus-parser.js?v=1"></script>
     <script>
-        // Tie visual indicators directly to file states
         const fileIn = document.getElementById('file-input');
         const compBtn = document.getElementById('main-compile-btn');
         const progBar = document.getElementById('load-progress');
@@ -325,14 +348,12 @@
             }
         });
 
-        // Intercept compilation hooks to animate properties
         const originalCompile = window.executeNexusCompilation;
         window.executeNexusCompilation = async function() {
             progBar.style.width = "100%";
             statusStr.innerText = "Parsing...";
             statusStr.style.color = "#8a2be2";
             
-            // Loop code to mimic progress completion ring
             let p = 0;
             let interval = setInterval(() => {
                 p += 10;
