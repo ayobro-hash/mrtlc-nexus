@@ -1,16 +1,16 @@
-// nexus-parser.js - MRTLC Nexus Main UI Engine
+// nexus-parser.js - Modern UI Engine for MRTLC Nexus
 
-// 1. Hook up all layout components exactly by their IDs
+// 1. Map core layout elements securely by their explicit IDs
 const compileBtn = document.getElementById('main-compile-btn');
 const fileInput = document.getElementById('file-input');
 const treeView = document.getElementById('tree-view');
 const codePreviewBox = document.getElementById('code-preview-box');
 
-// 2. Spawn the background thread matrix 
+// 2. Initialize background thread environment matrix
 let nexusWorker = new Worker('nexus-worker.js', { type: 'module' });
 let compilationTimeout = null;
 
-// 3. Keep compiled button locked down securely until a file stream is loaded
+// 3. Keep compile buttons securely locked until a valid target payload is staged
 if (fileInput) {
     fileInput.addEventListener('change', () => {
         if (fileInput.files.length > 0) {
@@ -24,7 +24,7 @@ if (fileInput) {
     });
 }
 
-// 4. Global Action Trigger for index.html (onclick="executeNexusCompilation()")
+// 4. Main Event Execution Trigger called directly from index.html (onclick)
 window.executeNexusCompilation = async function() {
     const file = fileInput.files[0];
     if (!file) {
@@ -32,38 +32,37 @@ window.executeNexusCompilation = async function() {
         return;
     }
 
-    // Toggle compilation states
+    // Shift interface layout states to processing mode
     compileBtn.innerText = "PROCESSING CHUNKS...";
     compileBtn.setAttribute('disabled', 'true');
     
     if (treeView) treeView.innerHTML = `<span style="color: #00ff00;">[STATUS] Extracting payload buffer stream...</span>`;
     if (codePreviewBox) codePreviewBox.value = "";
 
-    // Clear any active leftover timers
+    // Clear any dangling timeout checks from previous runs
     clearTimeout(compilationTimeout);
 
-    // WATCHDOG TIMER: If the parser library gets stuck in an infinite loop, abort!
+    // 10-Second Watchdog Timer: Protects UI thread availability against corrupt/malformed blocks
     compilationTimeout = setTimeout(() => {
-        console.warn("[MRTLC WATCHDOG] Compilation took too long. Task forcefully aborted.");
+        console.warn("[MRTLC WATCHDOG] Compilation limit reached. Aborting stuck process thread.");
         
-        // Kill the frozen thread instantly
         nexusWorker.terminate();
         
-        // Respawn a fresh thread immediately so the interface doesn't stay broken
+        // Instantly spawn a fresh worker matrix so the interface remains completely usable
         nexusWorker = new Worker('nexus-worker.js', { type: 'module' });
         setupWorkerListener(); 
         
         if (treeView) {
-            treeView.innerHTML = `<span style="color: #ffaa00;">[TIMEOUT DEADLOCK] Binary decoding halted. This model uses modern Roblox formatting properties that the 2023 rbxBinaryParser loop cannot decompress synchronously.</span>`;
+            treeView.innerHTML = `<span style="color: #ffaa00;">[TIMEOUT TERMINATION] Compilation execution took too long. The file data format layout may be corrupt or unstable.</span>`;
         }
         resetButton();
-    }, 10000); // 10-second limit
+    }, 10000);
 
     try {
-        // Read raw file bytes
+        // Read raw file stream bits natively
         const arrayBuffer = await file.arrayBuffer();
 
-        // Pass memory block directly to the background worker
+        // Ship the memory block array directly down the background worker pipe
         nexusWorker.postMessage(arrayBuffer, [arrayBuffer]);
     } catch (err) {
         console.error("Payload read failure:", err);
@@ -72,22 +71,22 @@ window.executeNexusCompilation = async function() {
     }
 };
 
-// 5. Encapsulate Worker Messengers so they can be re-bound during an execution reset
+// 5. Encapsulate Worker Message Listeners for hot-swapping resets
 function setupWorkerListener() {
     nexusWorker.onmessage = (event) => {
-        // Break the watchdog lock immediately since it responded
+        // Break the watchdog lock instantly since the thread responded safely
         clearTimeout(compilationTimeout);
         resetButton();
 
         const { success, data, error } = event.data;
 
         if (success) {
-            console.log("MRTLC Nexus array verified:", data);
+            console.log("[MRTLC MAIN] Modern structural array validated successfully:", data);
             
             if (treeView) {
-                treeView.innerHTML = ''; // Wipe out the initial "Awaiting data" messages
+                treeView.innerHTML = ''; // Wipe loading notifications
                 
-                // Render out the nested layout structure
+                // Recursively render out the incoming JSON explorer map
                 if (Array.isArray(data)) {
                     renderNexusTree(data, treeView);
                 } else {
@@ -95,71 +94,68 @@ function setupWorkerListener() {
                 }
             }
         } else {
-            console.error("Parser Engine Crash:", error);
+            console.error("[MRTLC MAIN] Internal Worker Exception:", error);
             if (treeView) {
-                treeView.innerHTML = `<span style="color: #ff3333;">[CRITICAL FAULT] ${error}</span>`;
+                treeView.innerHTML = `<span style="color: #ff3333;">[CRITICAL PARSER FAULT] ${error}</span>`;
             }
         }
     };
 
     nexusWorker.onerror = (err) => {
         clearTimeout(compilationTimeout);
-        console.error("Worker Global Error:", err);
+        console.error("Worker Core Thread Error:", err);
         resetButton();
     };
 }
 
-// Fire up the initial listener mapping
+// Initial binding pass for runtime execution
 setupWorkerListener();
 
-// 6. Interactive Element Multi-Tree Renderer 
+// 6. Interactive Recursive DOM Explorer Node Builder
 function renderNexusTree(instances, container) {
     instances.forEach(ins => {
         if (!ins) return;
 
-        // Construct interactive tree node row
+        // Construct interactive container div row
         const itemElement = document.createElement('div');
         itemElement.style.paddingLeft = "14px";
-        itemElement.style.margin = "3px 0";
+        itemElement.style.margin = "4px 0";
         itemElement.style.cursor = "pointer";
         itemElement.style.fontSize = "13px";
+        itemElement.style.userSelect = "none";
 
-        // Separate script elements visually from structural components
         const className = ins.ClassName || 'Instance';
+        
+        // UI Visual Distinction: Color-code script modules vs structural objects
         const isScript = className.includes('Script') || className === 'ModuleScript';
         const nameColor = isScript ? '#4fc1ff' : '#00ffd0';
 
         itemElement.innerHTML = `<span style="color: ${nameColor}; font-weight: bold;">[${className}]</span> <span style="color: #ffffff;">${ins.Name || 'Instance'}</span>`;
 
-        // Interactive mouse click to pull source traces out of the instance properties matrix
+        // Click Event: Extract raw source trace strings out of the clean instance tree properties
         itemElement.addEventListener('click', (e) => {
-            e.stopPropagation(); // Block bubbling so parent groups don't open simultaneously
+            e.stopPropagation(); // Block bubbling to prevent parent tree nodes from running double traces
             
             if (!codePreviewBox) return;
 
-            let sourceCode = null;
-            // Scan for the exact property paths used by rbxBinaryParser
-            if (ins.properties && ins.properties.Source) {
-                sourceCode = ins.properties.Source.value;
-            } else if (ins.Source) {
-                sourceCode = ins.Source;
-            }
+            // Our modern worker processes this to a flat 'Source' key if found
+            const sourceCode = ins.Source;
 
             if (sourceCode !== null && sourceCode !== undefined) {
                 codePreviewBox.value = `-- EXECUTING SOURCE TRACE MAP: ${ins.Name || 'Script'}\n-- Class Type: ${className}\n------------------------------------------------\n\n${sourceCode}`;
             } else {
-                codePreviewBox.value = `-- INSTANCE TRACE: ${ins.Name || 'Instance'}\n-- Class Type: ${className}\n-- Notification: No embedded script strings found inside this specific component structure block.`;
+                codePreviewBox.value = `-- INSTANCE TRACE: ${ins.Name || 'Instance'}\n-- Class Type: ${className}\n-- Notification: No embedded Lua strings or script data found inside this instance layout block.`;
             }
         });
 
         container.appendChild(itemElement);
 
-        // Walk recursively into deeply nested child layers
+        // Recursively cycle into deep descendant tree levels
         if (ins.Children && ins.Children.length > 0) {
             const nestedContainer = document.createElement('div');
             nestedContainer.style.borderLeft = "1px dashed #444444";
             nestedContainer.style.marginLeft = "6px";
-            nestedContainer.style.paddingLeft = "6px";
+            nestedContainer.style.paddingLeft = "8px";
             
             itemElement.appendChild(nestedContainer);
             renderNexusTree(ins.Children, nestedContainer);
