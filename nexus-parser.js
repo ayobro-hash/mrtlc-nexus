@@ -1,161 +1,302 @@
-// --- MRTLC NEXUS MODULE: CORE PARSER ENGINES ---
+// --- MRTLC NEXUS v3.5: MASTER DECOMPILER & PARSER ENGINE (INTEGRATED BINARY BUILD) ---
+
+/**
+ * UTILITY COMPONENT: LIGHTWEIGHT LZ4 BLOCK DECOMPRESSOR
+ * Unpacks the internal compressed chunk buffers utilized by modern Roblox binary formatting.
+ */
+function decompressLZ4(inputUint8Array, outputLength) {
+    let output = new Uint8Array(outputLength);
+    let iIdx = 0, oIdx = 0;
+
+    while (iIdx < inputUint8Array.length) {
+        const token = inputUint8Array[iIdx++];
+        let literalLength = token >> 4;
+
+        if (literalLength === 15) {
+            let b;
+            do {
+                b = inputUint8Array[iIdx++];
+                literalLength += b;
+            } while (b === 255);
+        }
+
+        // Copy literals directly into output array
+        for (let i = 0; i < literalLength; i++) {
+            output[oIdx++] = inputUint8Array[iIdx++];
+        }
+
+        if (iIdx >= inputUint8Array.length) break;
+
+        // Extract offset lookback pointer
+        const offset = inputUint8Array[iIdx++] | (inputUint8Array[iIdx++] << 8);
+        if (offset === 0) break;
+
+        let matchLength = token & 0x0F;
+        if (matchLength === 15) {
+            let b;
+            do {
+                b = inputUint8Array[iIdx++];
+                matchLength += b;
+            } while (b === 255);
+        }
+        matchLength += 4;
+
+        // Duplicate past dictionary sequence matching strings
+        let matchIdx = oIdx - offset;
+        for (let i = 0; i < matchLength; i++) {
+            output[oIdx++] = output[matchIdx++];
+        }
+    }
+    return output;
+}
+
+/**
+ * AUTOMATED FILE CONTROLLER GATEWAY
+ * Invoked when clicking the main compiler button layout matrix.
+ */
+async function executeNexusCompilation() {
+    const fileInput = document.getElementById('file-input');
+    if (!fileInput || !fileInput.files[0]) return;
+
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+    const previewBox = document.getElementById('code-preview-box');
+    const engineStatus = document.getElementById('engine-status');
+
+    if (previewBox) previewBox.value = "⚡ PROCESSING MATRIX CHUNKS...";
+
+    reader.onload = async (e) => {
+        const buffer = e.target.result;
+        const testBytes = new Uint8Array(buffer);
+
+        try {
+            let finalOutput = "";
+            // Verify if target chunk begins with "ROBLOX" binary magic array
+            const isBinary = String.fromCharCode(...testBytes.subarray(0, 6)) === "ROBLOX";
+
+            if (isBinary) {
+                finalOutput = await parseBinaryRobloxModel(buffer);
+            } else {
+                const textContent = new TextDecoder().decode(buffer);
+                finalOutput = parseXmlRobloxModel(textContent);
+            }
+
+            if (previewBox) previewBox.value = finalOutput;
+            if (engineStatus) {
+                engineStatus.innerText = "SUCCESS";
+                engineStatus.style.color = "var(--neon-green)";
+            }
+            
+            const downloadBtn = document.getElementById('download-btn');
+            if (downloadBtn) downloadBtn.disabled = false;
+
+        } catch (err) {
+            console.error(err);
+            if (previewBox) previewBox.value = `❌ PARSING ENGINE CRASH EVENT:\n${err.message}`;
+            if (engineStatus) {
+                engineStatus.innerText = "FAIL";
+                engineStatus.style.color = "#ff3333";
+            }
+        }
+    };
+
+    reader.readAsArrayBuffer(file);
+}
+
+/**
+ * PIPELINE PIPING 1: COMPLEX BINARY PARSER (.RBXM / .RBXL)
+ * Deconstructs serialized byte data streams, processes LZ4 steps, and extracts hidden .Source arrays
+ */
+async function parseBinaryRobloxModel(arrayBuffer) {
+    const view = new DataView(arrayBuffer);
+    const bytes = new Uint8Array(arrayBuffer);
+
+    let currentIndex = 14; // Forward pointer past structural header metadata strings
+    let extractedScripts = [];
+    let instanceCount = 0;
+    let scriptCount = 0;
+    let partCount = 0;
+    let fallbackTreeText = "Workspace\n";
+
+    while (currentIndex < bytes.length) {
+        if (currentIndex + 16 > bytes.length) break;
+
+        // Parse chunk signature identity text arrays (e.g. INST, PROP, PRNT)
+        const chunkType = String.fromCharCode(...bytes.subarray(currentIndex, currentIndex + 4));
+        currentIndex += 4;
+
+        const compressedLen = view.getUint32(currentIndex, true);
+        currentIndex += 4;
+        const decompressedLen = view.getUint32(currentIndex, true);
+        currentIndex += 4;
+        
+        currentIndex += 4; // Skip reserved chunk flags
+
+        let chunkPayload = bytes.subarray(currentIndex, currentIndex + compressedLen);
+        currentIndex += compressedLen;
+
+        // Decompress raw data array block if LZ4 bit flag matches
+        if (compressedLen < decompressedLen) {
+            chunkPayload = decompressLZ4(chunkPayload, decompressedLen);
+        }
+
+        // Handle Object Class Counts
+        if (chunkType === "INST") {
+            const instView = new DataView(chunkPayload.buffer, chunkPayload.byteOffset, chunkPayload.byteLength);
+            if (instView.byteLength >= 4) {
+                instanceCount += instView.getUint32(0, true);
+            }
+            
+            const instString = String.fromCharCode(...chunkPayload);
+            // Count instance definitions
+            const scriptMatches = (instString.match(/Script/g) || []).length;
+            const partMatches = (instString.match(/Part/g) || []).length;
+            scriptCount += scriptMatches;
+            partCount += partMatches;
+
+        // Handle Property Field Extraction
+        } else if (chunkType === "PROP") {
+            const propDataString = String.fromCharCode(...chunkPayload);
+            
+            if (propDataString.includes("Source")) {
+                // Regex scanning block to isolate clean code strings out of binary blobs
+                const codeBlocks = propDataString.match(/[\x20-\x7E\x0A\x0D]{12,}/g) || [];
+                codeBlocks.forEach(code => {
+                    const cleanCode = code.trim();
+                    // Clean structural properties to ensure only true code sequences parse
+                    if (!cleanCode.includes("Script") && 
+                        !cleanCode.includes("Value") && 
+                        !cleanCode.includes("Source") &&
+                        cleanCode.length > 4) {
+                        extractedScripts.push(cleanCode);
+                    }
+                });
+            }
+        }
+    }
+
+    // Sync metrics grid panel located inside nexus-ui.js
+    if (typeof updateNexusWorkspaceStats === "function") {
+        updateNexusWorkspaceStats(scriptCount || extractedScripts.length, partCount, instanceCount || 1);
+    }
+
+    // Generate lightweight visual explorer mock hierarchy
+    const treeView = document.getElementById('tree-view');
+    if (treeView) {
+        let treeHtml = `<div class="tree-node">📁 Model Root Instance [Binary Array Stream]</div>`;
+        for (let s = 0; s < (scriptCount || extractedScripts.length); s++) {
+            treeHtml += `<div class="tree-node" style="margin-left: 20px;">📜 ExtractedScript_${s+1}</div>`;
+        }
+        treeView.innerHTML = treeHtml;
+    }
+
+    if (extractedScripts.length > 0) {
+        return `-- MRTLC NEXUS EXTRAPOLATION SOURCE DUMP (.RBXM BINARY)\n\n` + 
+               extractedScripts.map((src, i) => `-- // ExtractedScript_${i+1}\n${src}`).join("\n\n");
+    } else {
+        return `-- Binary analysis successful, but zero active script source blocks were contained inside properties.`;
+    }
+}
+
+/**
+ * PIPELINE PIPING 2: XML DOM TEXT REGEX PARSER (.RBXLX / .RBXMX)
+ */
+function parseXmlRobloxModel(xmlText) {
+    let scriptCount = 0;
+    let partCount = 0;
+    let instanceCount = 0;
+    let extractedScripts = [];
+
+    // Tally up structures across XML tree arrays
+    scriptCount = (xmlText.match(/class="[^"]*Script"/gi) || []).length;
+    partCount = (xmlText.match(/class="Part"/gi) || []).length;
+    instanceCount = (xmlText.match(/<Item/gi) || []).length;
+
+    // Isolate code text values between Source blocks
+    const sourceRegex = /<ProtectedString name="Source"><!\[CDATA\[([\s\S]*?)\]\]><\/ProtectedString>/g;
+    let match;
+    
+    while ((match = sourceRegex.exec(xmlText)) !== null) {
+        if (match[1] && match[1].trim().length > 0) {
+            extractedScripts.push(match[1].trim());
+        }
+    }
+
+    // Sync metrics grid panel located inside nexus-ui.js
+    if (typeof updateNexusWorkspaceStats === "function") {
+        updateNexusWorkspaceStats(scriptCount, partCount, instanceCount);
+    }
+
+    // Build interactive file tree visual explorer elements
+    const treeView = document.getElementById('tree-view');
+    if (treeView) {
+        let treeHtml = `<div class="tree-node">📁 DataModel Root [XML Context Tree]</div>`;
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+        const items = xmlDoc.getElementsByTagName("Item");
+
+        let displayedItems = 0;
+        for (let i = 0; i < items.length; i++) {
+            if (displayedItems > 60) break; // Keep mobile DOM performant and lightweight
+            let className = items[i].getAttribute("class");
+            let nameNode = items[i].querySelector('Properties > string[name="Name"]');
+            let name = nameNode ? nameNode.textContent : className;
+
+            if (className && name) {
+                let icon = className.includes("Script") ? "📜" : "📦";
+                treeHtml += `<div class="tree-node" style="margin-left: 15px;">${icon} [${className}] - ${name}</div>`;
+                displayedItems++;
+            }
+        }
+        treeView.innerHTML = treeHtml;
+    }
+
+    if (extractedScripts.length > 0) {
+        return `-- MRTLC NEXUS EXTRAPOLATION SOURCE DUMP (.RBXXML)\n\n` + 
+               extractedScripts.map((src, i) => `-- // Compiled Script Segment [${i+1}]\n${src}`).join("\n\n");
+    } else {
+        return `-- XML trace completed, but no active script strings were mapped inside ProtectedString tags.`;
+    }
+}
+
+/**
+ * FILE MATRIX DISPATCH TRACKER ROUTINES
+ */
 function processFileSelection(input) {
     const file = input.files[0];
     if (!file) return;
 
-    uploadedBlob = file;
-    baseFileName = file.name.replace(/\.[^/.]+$/, "");
-    const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
-
     const statusBox = document.getElementById('file-status-box');
-    statusBox.innerText = `READY: [${file.name.toUpperCase()}] -> ${sizeMb} MB`;
-    statusBox.style.display = 'block';
+    if (statusBox) {
+        statusBox.innerText = `MOUNTED: [${file.name.toUpperCase()}]`;
+        statusBox.style.display = 'block';
+    }
 
-    document.getElementById('engine-status').innerText = "ARMED";
-    document.getElementById('engine-status').style.color = "var(--neon-purple)";
-    document.getElementById('main-compile-btn').disabled = false;
-}
-
-function executeNexusCompilation() {
-    if (!uploadedBlob) return;
-
-    const btn = document.getElementById('main-compile-btn');
-    btn.innerText = "⏳ DECODING STREAM ARRAYS...";
-    btn.disabled = true;
-
-    const reader = new FileReader();
-    const fileExtension = uploadedBlob.name.substring(uploadedBlob.name.lastIndexOf('.')).toLowerCase();
-
-    if (fileExtension === '.rbxm' || fileExtension === '.rbxl') {
-        reader.onload = function(e) {
-            const arrayBuffer = e.target.result;
-            const view = new DataView(arrayBuffer);
-            
-            let isRobloxBinary = false;
-            if (arrayBuffer.byteLength >= 8) {
-                const signature = String.fromCharCode(view.getUint8(0), view.getUint8(1), view.getUint8(2), view.getUint8(3));
-                if (signature === "ROBL") isRobloxBinary = true;
-            }
-
-            let mockCodeOutput = [
-                `-- MRTLC v3.0 PURE CLIENT BINARY DECODER ENGINE`,
-                `-- Decoded Binary File Source: ${uploadedBlob.name}`,
-                `local binaryModel = Instance.new("Folder")`,
-                `binaryModel.Name = "${baseFileName}_BinaryAsset"`,
-                `binaryModel.Parent = workspace`
-            ];
-
-            const textDecoder = new TextDecoder('utf-8');
-            const fullTextContent = textDecoder.decode(arrayBuffer);
-            
-            const scriptRegex = /function\s+([a-zA-Z0-9_]+)\s*\(|local\s+[a-zA-Z0-9_]+\s*=/g;
-            if (scriptRegex.test(fullTextContent)) {
-                mockCodeOutput.push(`\n-- Detected script structures within compressed chunks. Extracting compilation loops:`);
-                mockCodeOutput.push(`local scriptAsset = Instance.new("Script")\nscriptAsset.Name = "ExtractedLogic"\nscriptAsset.Source = [=[\n-- Compressed Binary code segment discovered in processing stream.\nlocal logic = true\n]=]\nscriptAsset.Parent = binaryModel`);
-            }
-
-            generatedLuauCode = mockCodeOutput.join("\n");
-            document.getElementById('code-preview-box').value = generatedLuauCode;
-            
-            const treeView = document.getElementById('tree-view');
-            treeView.innerHTML = `<div style="color: var(--neon-purple)">🔮 PURE CLIENT BINARY DECODE COMPLETE<br>• Header Verified: ${isRobloxBinary ? 'PROP_ROBLOX_VALID' : 'GENERIC_BUFFER'}<br>• Byte Matrix Map Unpacked Successfully.</div>`;
-            
-            finalizeNexusPipeline();
-        };
-        reader.readAsArrayBuffer(uploadedBlob);
-    } else {
-        reader.onload = function(e) {
-            const xmlText = e.target.result;
-            const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(xmlText, "text/xml");
-            const items = xmlDoc.getElementsByTagName("Item");
-
-            if (items.length === 0) {
-                alert("❌ Input formatting matrix array structure error.");
-                resetBtn(btn);
-                return;
-            }
-
-            let outputCode = [`-- MRTLC v3.0 CLIENT XML NEXUS PARSER`, `local rootWorkspace = workspace`];
-            const treeView = document.getElementById('tree-view');
-            treeView.innerHTML = "";
-
-            const wsElements = xmlDoc.querySelectorAll('Item[class="Workspace"] > Item');
-            if (wsElements.length === 0) {
-                Array.from(items).slice(0, 400).forEach(item => {
-                    if (item.parentNode && item.parentNode.tagName === 'roblox') return;
-                    parseNexusNode(item, "rootWorkspace", outputCode, treeView);
-                });
-            } else {
-                wsElements.forEach(item => { parseNexusNode(item, "rootWorkspace", outputCode, treeView); });
-            }
-
-            generatedLuauCode = outputCode.join("\n");
-            document.getElementById('code-preview-box').value = generatedLuauCode.substring(0, 25000) + (generatedLuauCode.length > 25000 ? "\n\n... [TRUNCATED DISPLAY PREVIEW] ..." : "");
-            finalizeNexusPipeline();
-        };
-        reader.readAsText(uploadedBlob);
+    const compileBtn = document.getElementById('main-compile-btn');
+    if (compileBtn) compileBtn.disabled = false;
+    
+    const engineStatus = document.getElementById('engine-status');
+    if (engineStatus) {
+        engineStatus.innerText = "ARMED";
+        engineStatus.style.color = "var(--accent)";
     }
 }
 
-function parseNexusNode(item, parentVar, outputCode, htmlParent) {
-    const className = item.getAttribute("class");
-    const refId = item.getAttribute("referent") || `ref_${Math.random().toString(36).substr(2, 4)}`;
-    const variableName = `obj_${refId}`;
-    let name = className;
-    let source = "";
-
-    const props = item.querySelector("Properties");
-    if (props) {
-        const nameNode = Array.from(props.getElementsByTagName("string")).find(n => n.getAttribute("name") === "Name");
-        if (nameNode) name = nameNode.textContent;
-        const sourceNode = Array.from(props.getElementsByTagName("ProtectedString")).find(n => n.getAttribute("name") === "Source");
-        if (sourceNode) source = sourceNode.textContent.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&quot;/g, '"').trim();
-    }
-
-    if (htmlParent.children.length < 60) {
-        const element = document.createElement('div');
-        element.className = "tree-node";
-        element.innerText = (className.includes("Script") ? "📜 " : "🟦 ") + name;
-        htmlParent.appendChild(element);
-        
-        const children = item.children;
-        Array.from(children).forEach(child => { if (child.tagName === "Item") parseNexusNode(child, variableName, outputCode, element); });
-    }
-
-    outputCode.push(`\nlocal ${variableName} = Instance.new("${className}")\n${variableName}.Name = "${name}"`);
-    if (source) outputCode.push(`${variableName}.Source = [[\n${source}\n]]`);
-    outputCode.push(`${variableName}.Parent = ${parentVar}`);
-}
-
-function finalizeNexusPipeline() {
-    const btn = document.getElementById('main-compile-btn');
-    btn.innerText = "⚙️ RECONSTRUCT STREAM COMPLETE";
-    document.getElementById('engine-status').innerText = "ONLINE";
-    document.getElementById('engine-status').style.color = "var(--neon-green)";
-    document.getElementById('download-btn').disabled = false;
-}
-
-function resetBtn(btn) {
-    btn.innerText = "⚙️ START RECONSTRUCT STREAM";
-    btn.disabled = false;
-}
-
-function copyConsoleBuffer() {
-    if (!generatedLuauCode) return;
-    navigator.clipboard.writeText(generatedLuauCode)
-        .then(() => alert("📋 Cache copied to system stream."))
-        .catch(() => alert("❌ Local buffer limit exceeded. Use download feature."));
-}
-
+/**
+ * LUA EXPORT UTILITY STREAMER
+ */
 function triggerScriptDownload() {
-    if (!generatedLuauCode) return;
-    const textBlob = new Blob([generatedLuauCode], { type: 'text/plain' });
-    const link = document.createElement('a');
-    link.download = `${baseFileName}_nexus_compiled.lua`;
-    link.href = window.URL.createObjectURL(textBlob);
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-        }
+    const previewBox = document.getElementById('code-preview-box');
+    if (!previewBox || !previewBox.value) return;
+
+    const fileBlob = new Blob([previewBox.value], { type: "text/plain;charset=utf-8" });
+    const downloadLink = document.createElement("a");
+    
+    downloadLink.href = URL.createObjectURL(fileBlob);
+    downloadLink.download = "nexus_compiled_source.lua";
+    downloadLink.style.display = "none";
+    
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+                }
